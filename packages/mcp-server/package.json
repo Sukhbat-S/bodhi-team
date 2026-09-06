@@ -1,0 +1,23 @@
+{
+  "name": "@seneca/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "bodhi-mcp": "src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:codex-plugin": "node scripts/build-codex-plugin.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@seneca/core": "*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "typescript": "^5.7.0"
+  }
+}

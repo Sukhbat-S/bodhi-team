@@ -1,0 +1,7 @@
+# GENERATED from configs/skill-matrix.json — do not edit.
+interface:
+  display_name: "Component-driven UI"
+  short_description: "Builds shared components, states and page integration."
+  default_prompt: "Use $component-driven-ui to build or refine shared components and their states before integrating the requested pages."
+policy:
+  allow_implicit_invocation: true

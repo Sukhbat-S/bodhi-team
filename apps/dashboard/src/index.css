@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply m-0 bg-stone-950 antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-stone-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-stone-700;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-stone-600;
+  }
+
+  :focus-visible {
+    outline: 1px solid #d4a76a;
+    outline-offset: 2px;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

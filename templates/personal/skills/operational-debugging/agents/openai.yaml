@@ -1,0 +1,7 @@
+# GENERATED from configs/skill-matrix.json — do not edit.
+interface:
+  display_name: "Operational debugging"
+  short_description: "Finds causes with discriminating, bounded probes."
+  default_prompt: "Use $operational-debugging to reproduce this failure, distinguish causes, and verify the smallest authorized repair."
+policy:
+  allow_implicit_invocation: true

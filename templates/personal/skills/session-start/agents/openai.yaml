@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "Continuity start"
+  short_description: "Restores narrowly relevant continuity after the objective is known."
+  default_prompt: "Use $session-start after my objective is known to restore only the exact task, project, checkpoint, and memory context it needs."
+policy:
+  allow_implicit_invocation: false

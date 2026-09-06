@@ -1,0 +1,7 @@
+# GENERATED from configs/skill-matrix.json — do not edit.
+interface:
+  display_name: "Workflow discovery"
+  short_description: "Maps real processes, exceptions and handoffs."
+  default_prompt: "Use $workflow-discovery to map the current process, its exceptions, and evidence-backed improvement opportunities."
+policy:
+  allow_implicit_invocation: true

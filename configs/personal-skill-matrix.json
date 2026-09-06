@@ -1,0 +1,90 @@
+{
+  "canonicalRoot": "templates/personal/skills",
+  "userCanonicalRoot": "templates/personal/skills",
+  "skills": [
+    {
+      "name": "accessibility-audit",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "graphic-design-production",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "information-design-review",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "research-chain",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "session-save",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "session-start",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "verify-by-emission",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "visual-system-review",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "workflow-discovery",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "existing-system-adoption",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "operational-debugging",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "component-driven-ui",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "skill-behavior-evaluation",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "skill-evolution",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "controller"
+    }
+  ]
+}

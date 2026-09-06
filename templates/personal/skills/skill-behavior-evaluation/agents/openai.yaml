@@ -1,0 +1,7 @@
+# GENERATED from configs/skill-matrix.json — do not edit.
+interface:
+  display_name: "Skill behavior evaluation"
+  short_description: "Tests skill outcomes with explicit evidence limits."
+  default_prompt: "Use $skill-behavior-evaluation to test this skill version against a bounded realistic task and report exactly what the evidence proves."
+policy:
+  allow_implicit_invocation: true

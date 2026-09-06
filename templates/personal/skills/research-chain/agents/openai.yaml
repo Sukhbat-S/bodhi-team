@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "Research chain"
+  short_description: "Research complex questions through evidence and challenge."
+  default_prompt: "Use $research-chain to investigate this question and show me what the evidence supports."
+policy:
+  allow_implicit_invocation: true

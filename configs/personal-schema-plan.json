@@ -1,0 +1,38 @@
+{
+  "contractVersion": 1,
+  "id": "personal-next-era-outcomes-v1",
+  "rollback": {
+    "path": "packages/db/src/migrations/next-era-outcomes-rollback.sql",
+    "sha256": "b6b8cf33c5a1d169bd1e7a2dc39efd71db17e10fc1b2060e9838fb3de52e3c1f"
+  },
+  "source": {
+    "path": "packages/db/bootstrap/personal-v1.sql",
+    "sha256": "3fb662abb658e2f288c4e17bf9b7414c35befaff65c21ed98577f08220a728e8",
+    "fingerprint": "3fb662abb658e2f288c4e17bf9b7414c35befaff65c21ed98577f08220a728e8"
+  },
+  "target": {
+    "path": "packages/db/bootstrap/personal-v2.sql",
+    "sha256": "3cdefe8498e8b47b2e4231697ae4ff3981ebf4fe153a1f5f63fe2a00f023dbd9",
+    "fingerprint": "3cdefe8498e8b47b2e4231697ae4ff3981ebf4fe153a1f5f63fe2a00f023dbd9"
+  },
+  "migrations": [
+    {
+      "order": 1,
+      "id": "next-era-outcomes-stage1",
+      "path": "packages/db/src/migrations/next-era-outcomes-stage1.sql",
+      "checksum": "4aac0015790b5186af19d7d5de6f3157524353039575181f2030b2e54eb730cf",
+      "classification": "additive",
+      "rollback": null,
+      "requiresOwnerApproval": false
+    },
+    {
+      "order": 2,
+      "id": "next-era-outcomes-stage2",
+      "path": "packages/db/src/migrations/next-era-outcomes-stage2.sql",
+      "checksum": "633c7dda6af1c0302d29d1f32e50e860cae89153b8bb1f8e69dd49d110f4a839",
+      "classification": "reversible",
+      "rollback": "Before new outcomes: restore the verified backup. After multi-outcome writes: keep compatible readers and reconcile explicitly; never delete outcomes to downgrade.",
+      "requiresOwnerApproval": true
+    }
+  ]
+}

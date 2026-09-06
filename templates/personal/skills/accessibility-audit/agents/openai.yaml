@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "Accessibility audit"
+  short_description: "Audits emitted web accessibility barriers."
+  default_prompt: "Use $accessibility-audit to audit this bounded web flow against applicable WCAG 2.2 criteria without implementing changes."
+policy:
+  allow_implicit_invocation: true

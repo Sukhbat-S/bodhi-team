@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bodhi": {
+      "command": "/bin/bash",
+      "args": [
+        "./mcp/launch.sh"
+      ],
+      "cwd": "."
+    }
+  }
+}

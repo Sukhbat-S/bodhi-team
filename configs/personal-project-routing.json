@@ -1,0 +1,4 @@
+{
+  "version": 2,
+  "projects": [{ "key": "bodhi", "nativeLabels": ["BODHI"], "pathLeaves": ["bodhi"], "preferredPathLeaf": "bodhi", "aliases": [] }]
+}

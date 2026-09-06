@@ -1,0 +1,7 @@
+# GENERATED from configs/skill-matrix.json — do not edit.
+interface:
+  display_name: "Verify by emission"
+  short_description: "Proves behavior from its real emitted runtime signal."
+  default_prompt: "Use $verify-by-emission to prove this change from its real signal."
+policy:
+  allow_implicit_invocation: true

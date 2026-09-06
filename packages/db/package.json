@@ -1,0 +1,27 @@
+{
+  "name": "@seneca/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "db:generate": "echo 'FORBIDDEN: BODHI uses hand-written idempotent migrations (src/migrations/apply-*.ts run via tsx), not drizzle-kit. drizzle.config lists only 5 of 14 schema files.' && exit 1",
+    "db:migrate": "echo 'FORBIDDEN: BODHI uses hand-written idempotent migrations (src/migrations/apply-*.ts run via tsx), not drizzle-kit migrate.' && exit 1",
+    "db:push": "echo 'FORBIDDEN: drizzle-kit push would DROP tables/columns not represented in drizzle.config (including trust_tiers, system_audit, book_chunks, the forgetting-tier columns, etc.). BODHI uses hand-written idempotent migrations: npx tsx packages/db/src/migrations/apply-<name>.ts' && exit 1",
+    "db:studio": "drizzle-kit studio",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@seneca/core": "*",
+    "better-sqlite3": "^12.9.0",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5.7.0"
+  }
+}

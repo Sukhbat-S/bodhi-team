@@ -1,0 +1,7 @@
+# GENERATED from configs/skill-matrix.json — do not edit.
+interface:
+  display_name: "Existing system adoption"
+  short_description: "Compares reuse, adaptation and custom infrastructure."
+  default_prompt: "Use $existing-system-adoption to compare existing capabilities with custom implementation for this requirement."
+policy:
+  allow_implicit_invocation: true

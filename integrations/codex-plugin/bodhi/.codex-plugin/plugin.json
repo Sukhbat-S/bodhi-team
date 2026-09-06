@@ -1,0 +1,27 @@
+{
+  "name": "bodhi",
+  "version": "1.0.0+codex.20260905120704",
+  "description": "A provider-neutral personal truth, policy, and evidence substrate.",
+  "author": {
+    "name": "BODHI Contributors"
+  },
+  "interface": {
+    "displayName": "BODHI",
+    "shortDescription": "Canonical personal truth, policy, and evidence.",
+    "longDescription": "Connect Codex to the local owner's memories, entities, private library, trust policy, parked commitments, work checkpoints, verification receipts, and governed skill-learning evidence.",
+    "developerName": "BODHI Contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write",
+      "MCP",
+      "Local data"
+    ],
+    "defaultPrompt": [
+      "Load my current BODHI project context.",
+      "Find the canonical memory behind this decision.",
+      "Save a verified checkpoint for this task."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

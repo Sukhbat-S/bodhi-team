@@ -1,0 +1,51 @@
+{
+  "name": "bodhi",
+  "version": "1.1.0-preview.1",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
+  "description": "Local single-user personal truth and control substrate \u2014 private team distribution",
+  "productName": "BODHI \u2014 personal truth and control substrate",
+  "license": "MIT",
+  "author": "BODHI Contributors",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@seneca/server",
+    "start:all": "bash scripts/start.sh",
+    "stop:all": "bash scripts/stop.sh",
+    "build": "bash scripts/lib/bodhi-runtime.sh npm run _build:workspaces",
+    "clean": "npm run clean --workspaces --if-present",
+    "test": "bash scripts/lib/bodhi-runtime.sh vitest run",
+    "test:watch": "vitest",
+    "_build:workspaces": "npm run build --workspaces --if-present",
+    "build:release-contract": "node scripts/build-release-contract.mjs",
+    "pack:release": "node scripts/pack-release.mjs",
+    "check:privacy": "node scripts/check-distribution.mjs",
+    "skills:install": "node scripts/install-project-skills.mjs"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.3.2",
+    "@types/tar": "^6.1.13",
+    "js-yaml": "^5.3.0",
+    "style-dictionary": "^5.4.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "three": "0.183.2",
+    "qs": "6.16.0",
+    "vite": "6.4.3"
+  },
+  "dependencies": {
+    "tar": "^7.5.22"
+  }
+}

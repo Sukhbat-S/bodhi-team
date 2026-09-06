@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "Graphic Design Production"
+  short_description: "Critique-gated deterministic design exports"
+  default_prompt: "Use $graphic-design-production to produce a verified graphic design artifact."
+policy:
+  allow_implicit_invocation: true
