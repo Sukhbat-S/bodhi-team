@@ -1,0 +1,4 @@
+{
+  "name": "bodhi-skills",
+  "description": "Eval wrapper over BODHI's owner-neutral skills; measurement only, not a discovery surface"
+}

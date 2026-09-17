@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "Product discovery"
+  short_description: "Find the right problem and smallest valid test."
+  default_prompt: "Use $product-discovery to find the real user problem and design the smallest useful validation."
+policy:
+  allow_implicit_invocation: true

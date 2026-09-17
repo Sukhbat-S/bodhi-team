@@ -66,19 +66,5 @@ export function mountPersonalDirectionRoutes(app: Hono, service: PersonalDirecti
     catch (error) { return directionError(c, error); }
   });
 
-  app.get("/api/workflow-candidates", async (c) => {
-    try {
-      const candidates = await service.listWorkflowCandidates({
-        project: c.req.query("project"), status: c.req.query("status") as never,
-        limit: c.req.query("limit") ? Number(c.req.query("limit")) : undefined,
-      });
-      return c.json({ candidates });
-    } catch (error) { return directionError(c, error); }
-  });
-  app.post("/api/workflow-candidates/:id/resolve", async (c) => {
-    try { return c.json({ candidate: await service.resolveWorkflowCandidate(c.req.param("id"), await body(c) as never) }); }
-    catch (error) { return directionError(c, error); }
-  });
-
   return app;
 }

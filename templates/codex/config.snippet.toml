@@ -1,0 +1,29 @@
+# BODHI for Codex: configuration snippet.
+# Review it, then merge by hand into ~/.codex/config.toml. Paths below use the
+# BODHI_ROOT placeholder; scripts/install-harness.mjs prints a copy rendered
+# with the absolute path of this checkout. Never put a token here: the MCP
+# adapter reads the bearer from BODHI's private .env (mode 0600) at startup.
+#
+# Deliberately absent: model pins, approval policy, sandbox or permission
+# defaults, project trust entries and anything tied to one account's plan.
+
+# Worker fan-out. Start with two or three workers; the parent reviews every
+# result and owns commit, push and merge.
+[agents]
+max_concurrent_threads_per_session = 3
+
+# Primary: register the bundled MCP server directly, with an explicit
+# BODHI_ENV_FILE. This works wherever the checkout lives.
+[mcp_servers.bodhi]
+command = "/bin/bash"
+args = ["$BODHI_ROOT/integrations/codex-plugin/bodhi/mcp/launch.sh"]
+
+[mcp_servers.bodhi.env]
+BODHI_ENV_FILE = "$BODHI_ROOT/.env"
+
+# Alternative: the BODHI plugin from a personal marketplace (see
+# marketplace.snippet.json, then `codex plugin add bodhi@personal`). The plugin
+# runs from Codex's cache without BODHI_ENV_FILE, so it finds .env only when the
+# checkout is at ~/bodhi or ~/Documents/bodhi. Use one registration, not both.
+# [plugins."bodhi@personal"]
+# enabled = true

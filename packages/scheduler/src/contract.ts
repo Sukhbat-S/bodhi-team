@@ -12,8 +12,7 @@ export type RetainedSchedulerJobType =
   | "library-retrieval-eval"
   | "parking-maintenance"
   | "maintenance-liveness"
-  | "checkpoint-maintenance"
-  | "skill-learning-maintenance";
+  | "checkpoint-maintenance";
 
 export type RetainedSchedulerRunner =
   | "runRetrievalEval"
@@ -23,8 +22,7 @@ export type RetainedSchedulerRunner =
   | "runLibraryRetrievalEvalGated"
   | "runParkingMaintenance"
   | "runMaintenanceLiveness"
-  | "runCheckpointMaintenance"
-  | "runSkillLearningMaintenance";
+  | "runCheckpointMaintenance";
 
 /** Retained jobs are maintenance-only by construction; outward work stays in Codex. */
 export type SchedulerJobScope = "substrate-maintenance";
@@ -50,7 +48,7 @@ export interface RetainedSchedulerJob {
 }
 
 /**
- * The nine substrate jobs exposed by the scheduler status API.
+ * The eight substrate jobs exposed by the scheduler status API.
  *
  * `library-retrieval-eval` is an hourly staleness probe rather than a daily
  * slot, so it is intentionally not catch-up tracked. Retrieval and library
@@ -142,17 +140,6 @@ export const RETAINED_JOB_MANIFEST = [
     guard: "checkpoint-maintenance",
     runner: "runCheckpointMaintenance",
     envVar: "CHECKPOINT_MAINTENANCE_ENABLED",
-    catchUp: true,
-    optIn: false,
-  },
-  {
-    type: "skill-learning-maintenance",
-    scope: "substrate-maintenance",
-    schedule: "0 7 * * *",
-    registrationOrder: 6,
-    guard: "skill-learning-maintenance",
-    runner: "runSkillLearningMaintenance",
-    envVar: "SKILL_LEARNING_MAINTENANCE_ENABLED",
     catchUp: true,
     optIn: false,
   },

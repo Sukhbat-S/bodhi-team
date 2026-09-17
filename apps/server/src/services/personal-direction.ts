@@ -9,7 +9,6 @@ import type {
   ObservationScope,
   OpportunityStatus,
   PersonalGoalStatus,
-  WorkflowCandidateStatus,
 } from "@seneca/db";
 import { canonicalizeCheckpointProjectKey } from "./checkpoints.js";
 import { isEffectivelyPassed, readEffectiveCompletion } from "./checkpoint-verification.js";
@@ -65,11 +64,6 @@ export type OpportunityResolution =
   | { action: "dismiss"; reason: string }
   | { action: "park"; reason?: string; parkedItemId: string };
 
-export type WorkflowCandidateResolution =
-  | { action: "approve"; reason?: string }
-  | { action: "dismiss"; reason: string }
-  | { action: "materialize"; reason?: string; checkpointId: string };
-
 export interface PersonalDirectionService {
   createGoal(input: SaveGoalInput): Promise<Record<string, unknown>>;
   updateGoal(id: string, input: UpdateGoalInput): Promise<Record<string, unknown>>;
@@ -79,8 +73,6 @@ export interface PersonalDirectionService {
   proposeOpportunity(input: ProposeOpportunityInput): Promise<{ opportunity: Record<string, unknown>; deduped: boolean }>;
   listOpportunities(input?: { project?: string; status?: OpportunityStatus; goalId?: string; limit?: number }): Promise<Record<string, unknown>[]>;
   resolveOpportunity(id: string, input: OpportunityResolution): Promise<Record<string, unknown>>;
-  listWorkflowCandidates(input?: { project?: string; status?: WorkflowCandidateStatus; limit?: number }): Promise<Record<string, unknown>[]>;
-  resolveWorkflowCandidate(id: string, input: WorkflowCandidateResolution): Promise<Record<string, unknown>>;
 }
 
 function requiredText(value: unknown, field: string, max = 20_000): string {
@@ -230,13 +222,6 @@ const SELECT_OPPORTUNITY = sql`
   updated_at AS "updatedAt", resolved_at AS "resolvedAt"
 `;
 
-const SELECT_CANDIDATE = sql`
-  id, project_key AS "projectKey", pattern_key AS "patternKey", summary,
-  qualifying_checkpoint_ids AS "qualifyingCheckpointIds", successful_runs AS "successfulRuns",
-  status, resolution_reason AS "resolutionReason",
-  materialized_checkpoint_id AS "materializedCheckpointId",
-  created_at AS "createdAt", updated_at AS "updatedAt", resolved_at AS "resolvedAt"
-`;
 
 export function createPersonalDirectionService(db: Database): PersonalDirectionService {
   async function createGoal(input: SaveGoalInput): Promise<Record<string, unknown>> {
@@ -484,65 +469,6 @@ export function createPersonalDirectionService(db: Database): PersonalDirectionS
     return { eligibleSuccessfulRuns, evidenceState: eligibleSuccessfulRuns >= 3 && materializedValid ? "valid" : "evidence-invalid" };
   }
 
-  async function listWorkflowCandidates(input: { project?: string; status?: WorkflowCandidateStatus; limit?: number } = {}): Promise<Record<string, unknown>[]> {
-    const conditions: SQL[] = [];
-    if (input.project) conditions.push(sql`project_key = ${canonicalizeCheckpointProjectKey(input.project)}`);
-    if (input.status) {
-      if (!(["candidate", "approved", "dismissed", "materialized"] as string[]).includes(input.status)) throw new DirectionValidationError("candidate status is invalid");
-      conditions.push(sql`status = ${input.status}`);
-    }
-    const where = conditions.length ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
-    const limit = Math.max(1, Math.min(100, Number(input.limit) || 20));
-    return db.transaction(async (tx) => {
-      const rows = await tx.execute(sql`SELECT ${SELECT_CANDIDATE} FROM workflow_candidates ${where} ORDER BY updated_at DESC LIMIT ${limit}`) as unknown as Record<string, unknown>[];
-      return Promise.all(rows.map(async (row) => ({ ...row, ...await workflowEligibility(tx, row) })));
-    }, { isolationLevel: "repeatable read", accessMode: "read only" });
-  }
-
-  async function resolveWorkflowCandidate(idInput: string, input: WorkflowCandidateResolution): Promise<Record<string, unknown>> {
-    const id = uuid(idInput, "workflow candidate id");
-    if (!input || !["approve", "dismiss", "materialize"].includes(input.action)) throw new DirectionValidationError("candidate resolution action is invalid");
-    return db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('bodhi-checkpoint-evidence'))`);
-      const candidates = await tx.execute(sql`
-        SELECT status, project_key AS "projectKey", pattern_key AS "patternKey", qualifying_checkpoint_ids AS "qualifyingCheckpointIds"
-        FROM workflow_candidates WHERE id = ${id}::uuid LIMIT 1 FOR UPDATE
-      `) as unknown as Array<{ status: WorkflowCandidateStatus; projectKey: string; patternKey: string; qualifyingCheckpointIds: string[] }>;
-      if (!candidates[0]) throw new DirectionNotFoundError("workflow candidate not found");
-      if (input.action !== "dismiss" && (await workflowEligibility(tx, candidates[0], true)).evidenceState !== "valid") throw new DirectionConflictError("candidate qualifying evidence is invalid or unavailable");
-      let status: WorkflowCandidateStatus;
-      let checkpointId: string | null = null;
-      if (input.action === "approve") {
-        if (candidates[0].status !== "candidate") throw new DirectionConflictError("only a candidate can be approved");
-        status = "approved";
-      } else if (input.action === "dismiss") {
-        if (candidates[0].status === "materialized") throw new DirectionConflictError("materialized candidate cannot be dismissed");
-        requiredText(input.reason, "reason", 2_000);
-        status = "dismissed";
-      } else {
-        if (candidates[0].status !== "approved") throw new DirectionConflictError("candidate must be approved before materialization");
-        checkpointId = uuid(input.checkpointId, "checkpointId");
-        const completion = await readEffectiveCompletion(tx, checkpointId, true);
-        const artifacts = await tx.execute(sql`
-          SELECT ca.id FROM checkpoint_artifacts ca JOIN work_checkpoints wc ON wc.id = ca.checkpoint_id
-          WHERE wc.id = ${checkpointId}::uuid AND wc.pattern_key = ${candidates[0].patternKey}
-            AND ca.sha256 IN (SELECT subject_revision FROM verification_receipts
-              WHERE checkpoint_id = ${checkpointId}::uuid AND id = ANY(${`{${completion?.effectiveVerification.receiptIds.join(',') ?? ''}}`}::uuid[]))
-        `) as unknown[];
-        if (!completion || completion.projectKey !== candidates[0].projectKey || !isEffectivelyPassed(completion) || !artifacts.length) {
-          throw new DirectionConflictError("materialization requires a same-pattern completed checkpoint and artifact hash matching its effective passed verification");
-        }
-        status = "materialized";
-      }
-      const updated = await tx.execute(sql`
-        UPDATE workflow_candidates SET status = ${status}, resolution_reason = ${optionalText(input.reason, "reason", 2_000)},
-          materialized_checkpoint_id = ${checkpointId}::uuid, updated_at = now(), resolved_at = now()
-        WHERE id = ${id}::uuid RETURNING ${SELECT_CANDIDATE}
-      `) as unknown as Record<string, unknown>[];
-      return updated[0];
-    });
-  }
-
   return {
     createGoal,
     updateGoal,
@@ -552,8 +478,6 @@ export function createPersonalDirectionService(db: Database): PersonalDirectionS
     proposeOpportunity,
     listOpportunities,
     resolveOpportunity,
-    listWorkflowCandidates,
-    resolveWorkflowCandidate,
   };
 }
 

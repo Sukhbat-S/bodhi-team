@@ -63,7 +63,6 @@ const RETIRED_TRIGGER_TYPES = [
   "verify-dispatches",
   "substrate-curation",
   "research",
-  "jewelry-advisor",
   "sentry-nightly",
   "memory-triage",
 ] as const;

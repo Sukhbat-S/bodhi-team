@@ -16,21 +16,15 @@ import {
   getPolicyPacket,
   getProjectContext,
   librarySearch,
-  listSkillLearningCandidates,
-  listSkillUsage,
   listParked,
   lookupEntities,
   listGoals,
   listOpportunities,
-  listWorkflowCandidates,
   parkItem,
   recordCheckpointVerification,
   recordGoalReview,
-  recordSkillRun,
   proposeOpportunity,
   resolveOpportunity,
-  resolveSkillLearningCandidate,
-  resolveWorkflowCandidate,
   saveGoal,
   saveCheckpoint,
   searchMemories,
@@ -204,108 +198,6 @@ server.registerTool("resolve_opportunity", {
   },
 }, async (input) => textResult(await resolveOpportunity(input.opportunity_id, {
   action: input.action, reason: input.reason, parkedItemId: input.parked_item_id,
-})));
-
-server.registerTool("list_workflow_candidates", {
-  description: "List repeated workflows backed by at least three accepted and verified checkpoint outcomes.",
-  inputSchema: {
-    project: z.string().optional(),
-    status: z.enum(["candidate", "approved", "dismissed", "materialized"]).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-  },
-}, async (input) => textResult(await listWorkflowCandidates(input)));
-
-server.registerTool("resolve_workflow_candidate", {
-  description: "Approve, dismiss, or evidence materialization of one workflow candidate. Approval creates no files.",
-  inputSchema: {
-    candidate_id: z.string().uuid(),
-    action: z.enum(["approve", "dismiss", "materialize"]),
-    reason: z.string().optional(),
-    checkpoint_id: z.string().uuid().optional(),
-  },
-}, async (input) => textResult(await resolveWorkflowCandidate(input.candidate_id, {
-  action: input.action, reason: input.reason, checkpointId: input.checkpoint_id,
-})));
-
-const skillSignalSchema = z.object({
-  type: z.enum([
-    "correction", "rejection", "workaround", "routing-miss", "missing-context",
-    "stale-reference", "quality-gap", "verification-failure", "safety-failure", "agent-boundary",
-  ]),
-  learning_key: z.string(),
-  change_type: z.enum(["update", "split", "merge", "retire", "new-skill", "agent-evaluation"]),
-  severity: z.enum(["ordinary", "material", "critical"]).optional(),
-  summary: z.string(),
-});
-
-server.registerTool("record_skill_run", {
-  description: "Record concrete sanitized learning signals. Clean runs create no receipt. An explicit checkpoint binds immutable outcome evidence; usage counts the provider/task/project/skill version once. Never include prompts, responses, reasoning, messages, transcripts, or tool output.",
-  inputSchema: {
-    project_key: z.string(),
-    provider: z.string().default("codex"),
-    native_task_id: z.string(),
-    skill_name: z.string(),
-    result_disposition: z.enum(["accepted", "revised", "discarded", "failed"]),
-    verification_state: z.enum(["passed", "failed", "not-required", "unverified"]),
-    checkpoint_id: z.string().uuid().nullable().optional(),
-    external_skill_dependencies: z.array(z.string()).optional(),
-    completed_at: z.string().optional(),
-    signals: z.array(skillSignalSchema).max(10).optional(),
-  },
-}, async (input) => textResult(await recordSkillRun({
-  projectKey: input.project_key,
-  provider: input.provider,
-  nativeTaskId: input.native_task_id,
-  skillName: input.skill_name,
-  resultDisposition: input.result_disposition,
-  verificationState: input.verification_state,
-  checkpointId: input.checkpoint_id,
-  externalSkillDependencies: input.external_skill_dependencies,
-  completedAt: input.completed_at,
-  signals: input.signals?.map((signal) => ({
-    type: signal.type,
-    learningKey: signal.learning_key,
-    changeType: signal.change_type,
-    severity: signal.severity,
-    summary: signal.summary,
-  })),
-})));
-
-server.registerTool("list_skill_usage", {
-  description: "List compact usage aggregates for governed skills. Missing telemetry is unverified, never proof that a skill is unused.",
-  inputSchema: {
-    project: z.string().optional(),
-    skill: z.string().optional(),
-    version: z.string().optional(),
-    since: z.string().optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional().default(50),
-  },
-}, async (input) => textResult(await listSkillUsage(input)));
-
-server.registerTool("list_skill_learning_candidates", {
-  description: "List evidence-backed skill learning candidates without changing skills or approval state.",
-  inputSchema: {
-    project: z.string().optional(),
-    skill: z.string().optional(),
-    type: z.enum(["update", "split", "merge", "retire", "new-skill", "agent-evaluation"]).optional(),
-    severity: z.enum(["ordinary", "material", "critical"]).optional(),
-    status: z.enum(["candidate", "approved", "dismissed", "materialized"]).optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-  },
-}, async (input) => textResult(await listSkillLearningCandidates(input)));
-
-server.registerTool("resolve_skill_learning_candidate", {
-  description: "Approve, dismiss, or evidence materialization of one skill learning candidate. Approval never edits skill or agent files.",
-  inputSchema: {
-    candidate_id: z.string().uuid(),
-    action: z.enum(["approve", "dismiss", "materialize"]),
-    reason: z.string().optional(),
-    checkpoint_id: z.string().uuid().optional(),
-  },
-}, async (input) => textResult(await resolveSkillLearningCandidate(input.candidate_id, {
-  action: input.action,
-  reason: input.reason,
-  checkpointId: input.checkpoint_id,
 })));
 
 const checkpointDecisionSchema = z.object({
@@ -595,7 +487,9 @@ server.registerTool("list_parked", {
 
 async function main() {
   await server.connect(new StdioServerTransport());
-  console.error("[bodhi-mcp] Pure-substrate server started (30 tools)");
+  // Count from the live registry so this banner cannot drift from the catalog again (it said 30 after the 2026-09-12 retirement to 24).
+  const registered = Object.keys((server as unknown as { _registeredTools?: Record<string, unknown> })._registeredTools ?? {}).length;
+  console.error(`[bodhi-mcp] Pure-substrate server started${registered > 0 ? ` (${registered} tools)` : ""}`);
 }
 
 main().catch((error) => {

@@ -1,6 +1,6 @@
 ---
 name: verify-by-emission
-description: Verify config/runtime and browser/visual claims from the real emitted state, not a diff, green build, tool-success message, or screenshot alone. Use before claiming a model-selection, routing, cron, env-gated, responsive, or interaction behavior works.
+description: Proves a behavior claim from the signal the running system actually emits — the live response, the process's own readback, the rendered page — rather than from a diff, a passing test, or a tool call that returned success. Use for "verify the cron actually fires", "did the restart really pick up the new env", "is it live or just deployed", "check it in the browser, not the code".
 ---
 
 # Verify by Emission
@@ -11,7 +11,15 @@ Use [outcome acceptance](references/outcome-acceptance.md) when technical checks
 
 ## Choose the evidence
 
-State the exact behavior, acceptance condition, and observable that can prove it. Use the narrowest relevant current source:
+Optimize time to a trustworthy result, not the number of checks. Identify the claim and the cheapest reliable observation that would expose it being wrong; keep this planning internal for routine work.
+
+- **Default to one decisive check, not one tool call.** An exact destination readback can establish a saved record without a browser visit. It cannot establish runtime adoption or a working user interaction. Add evidence only for an uncovered material claim.
+- **Batch repeated checks.** For imports, compare expected keys, fields and control totals against destination records together. Samples can support UI review, but cannot establish complete import coverage or financial reconciliation.
+- **Reuse valid evidence.** Do not repeat a passed check when its subject revision, destination and relevant runtime state remain applicable. Changed code, data, deployment, session or dependencies invalidate only the affected claims; mutable external state may need a fresh read.
+- **Escalate for consequences or contradictions.** Money, stock, payroll activation, access control and destructive operations need relevant independent expectations, reconciliation or failure-path checks. One superficial readback is not enough. Low-risk edits do not inherit that entire procedure.
+- **Stop when the scoped claims pass.** Do not add screenshots, another tool, a receipt or a second read merely for reassurance. If evidence is missing or conflicting, report the exact limit and choose a bounded discriminating check; do not loop through equivalent probes.
+
+Use the narrowest relevant current source:
 
 - **Codex model, effort, or context:** bind the check to the exact native task and host. Read the task's emitted model/effort metadata and reported context-window value, using native task tools or narrowly selected fields from its exact rollout. Configuration and model catalogs explain those values but do not replace runtime evidence. A client label need not equal the backend request setting; report that distinction when relevant.
 - **New-task features:** verify activation in a fresh task when initialization occurs at task startup, then exercise the requested behavior. Do not infer continuity across a context transition from the feature flag alone.
@@ -27,12 +35,9 @@ Restart or reload only the affected process when it holds stale configuration an
 
 ## Browser and visual behavior
 
-Bind all evidence to the same rendered state:
+Use the browser when the claim concerns interaction, appearance or visible delivery—not automatically after every data write. Bind the actual URL/route and the relevant result to the same rendered state; collect them together when supported.
 
-1. Read the actual URL or route after navigation.
-2. Read an independent runtime or DOM signal appropriate to the claim, such as viewport width, a media-query result, a DOM marker, or the resulting control state.
-3. Inspect the visible page state; capture a screenshot when it materially helps review.
-4. Compare these observations with the acceptance condition.
+For interaction claims, exercise the affected flow and inspect its resulting control/DOM state; add a destination readback only when persistence is claimed. For visual claims, inspect the visible result and the relevant runtime signal (for example viewport width for responsive layout). A screenshot is useful when appearance matters, not a mandatory artifact for every check. Compare the evidence with the acceptance condition without unrelated navigation.
 
 For preview delivery, distinguish requested, opened, and visible. A queued open request or a temporary browser tab is not proof that the requested content is visible in the user’s task. Use available native tab/panel evidence and confirm the right destination before claiming it is shown. Do not use voice-only tools in text mode.
 
@@ -40,10 +45,9 @@ A successful resize, click, navigation, or screenshot call proves only that the 
 
 ## Finish at the right scope
 
-Record the expected signal, observed result, evidence source, and limitation. Use a verification receipt for material effects when the applicable checkpoint or workflow requires it. Do not automatically retry an uncertain external write.
+Report the result, decisive evidence and any material limitation concisely. Record formal expected/observed signals or a verification receipt only when the applicable checkpoint or workflow requires them; this skill does not start a saving workflow. Do not automatically retry an uncertain external write.
 
 Once the relevant fresh evidence passes, finish. Broaden or repeat verification only for new changes, failures, stale evidence, or an unresolved concern. This skill does not add an approval gate or expand the authorized action.
 
-## Governed learning receipt
+When evaluating efficiency, compare elapsed time and tool calls on equivalent scoped tasks while checking retained error detection. Treat a 10× improvement as a target, never as established by shorter instructions or a single favorable example.
 
-Invoke `$skill-evolution` in receipt mode only when this run exposes concrete correction, workaround, stale-reference, routing, quality, verification, safety, or agent-boundary evidence. A product bug correctly detected is project verification evidence, not itself a learning signal. Record skill learning only for a specific guidance or execution gap, its consequence and a reusable correction; use skill-evolution’s attribution guidance when uncertain. Clean runs create no learning receipt or write. Keep receipts sanitized and task-scoped; never include raw source content or conversation material, and never let receipt failure block the primary result.

@@ -7,7 +7,7 @@ Strengthen the owner's source and synthesis judgment.
 - Establish the question and the research judgment being practiced.
 - Ask exactly one material question about one research variable per response, then stop. Do not bundle population, treatment, outcome, timeframe, confounders, and stopping rules into one prompt or assignment.
 - Start with hypothesis quality, claim decomposition, source selection, contradiction, or confidence calibration—whichever is currently weakest.
-- Let the owner propose the reasoning before showing Codex's version.
+- Let the owner propose the reasoning before showing the assistant's version.
 - Challenge the attempt with one missing claim, incentive, freshness issue, or counter-source.
 - End a completed cycle with one transferable principle and a changed scenario that tests retrieval.
 

@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "First-principles decision"
+  short_description: "Resolve consequential choices from first principles."
+  default_prompt: "Use $first-principles-decision to help me resolve this choice and strengthen my judgment."
+policy:
+  allow_implicit_invocation: true

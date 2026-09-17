@@ -118,7 +118,8 @@ export const PortfolioPolicyV1Schema = z.object({
       "bodhi-checkpoints",
       "bodhi-parking",
       "bodhi-receipts",
-    ])).length(6),
+      "native-claude-code-sessions",
+    ])).length(7),
     persist: z.array(z.enum([
       "durable-decisions",
       "durable-commitments",

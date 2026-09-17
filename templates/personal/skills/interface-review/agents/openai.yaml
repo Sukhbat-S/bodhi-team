@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "Interface review"
+  short_description: "Reports where a screen or flow breaks, with evidence."
+  default_prompt: "Use $interface-review to go through this screen and tell me where it breaks, with evidence, severity, and location."
+policy:
+  allow_implicit_invocation: true

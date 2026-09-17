@@ -1,7 +1,7 @@
 # Owner-neutral personal-install metadata.
 interface:
   display_name: "Continuity close"
-  short_description: "Saves warranted continuity after an explicit request."
-  default_prompt: "Use $session-save to save warranted checkpoint, artifact, verification, and capture-policy-safe memory with readback."
+  short_description: "Saves the identified outcome with evidence and next steps."
+  default_prompt: "Use $session-save to preserve the explicitly identified outcome, its artifacts, verification, and unfinished work; save multiple outcomes separately only when I include them."
 policy:
   allow_implicit_invocation: false

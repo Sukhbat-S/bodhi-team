@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "Motion and feel"
+  short_description: "Decides easing, duration and how a component should feel."
+  default_prompt: "Use $emil-design-eng to decide whether and how this should animate, with exact easing and duration."
+policy:
+  allow_implicit_invocation: true

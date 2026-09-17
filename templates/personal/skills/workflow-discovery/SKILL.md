@@ -1,6 +1,6 @@
 ---
 name: workflow-discovery
-description: Map an existing operational process from evidence, including actors, inputs, decisions, exceptions, and handoffs. Use to understand how work happens today before redesign or automation; do not use for product demand discovery or an already-specified implementation.
+description: Maps how a piece of work runs today from evidence — actors, inputs, decision rules, handoffs, exceptions — and keeps observed execution separate from what the written procedure claims. Use for "walk me through how this runs now", "trace one order end to end", "where does the manual re-entry happen", "show me the real process, not the SOP", "what breaks when someone is on leave".
 ---
 
 # Workflow Discovery
@@ -34,7 +34,3 @@ Use a compact sequence or table; add a diagram only when branches or actor hando
 Separate the current process from improvement proposals. Name the most consequential supported friction or uncertainty and the smallest observation that would resolve it. Mapping alone does not authorize implementation, interviews, account access, or changes to the process.
 
 Use product-discovery when the unresolved question is whether a user problem is worth solving; use first-principles-decision when choosing among established alternatives. An accepted implementation request should continue in its delivery workflow without reopening discovery unnecessarily.
-
-## Governed learning receipt
-
-Invoke `$skill-evolution` in receipt mode only for a concrete gap in this skill's guidance that caused an observed correction, failure, or workaround, with a reusable correction and checkable result. A process defect correctly discovered is project evidence, not a skill defect. A clean run creates no receipt or write. Record at most one sanitized task-level receipt; exclude private source content and do not let receipt failure block the result.

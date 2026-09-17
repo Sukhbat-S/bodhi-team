@@ -56,7 +56,6 @@ import {
 import { runMaintenanceLiveness as runMaintenanceLivenessImpl } from "./jobs/maintenance-liveness.js";
 import { runParkingMaintenance as runParkingMaintenanceImpl } from "./jobs/parking-maintenance.js";
 import { runCheckpointMaintenance as runCheckpointMaintenanceImpl } from "./jobs/checkpoint-maintenance.js";
-import { runSkillLearningMaintenance as runSkillLearningMaintenanceImpl } from "./jobs/skill-learning-maintenance.js";
 import { registerSchedulerCronJobs } from "./cron-registration.js";
 // Durable job state + on-wake catch-up (Jun 13) — laptop sleeps through
 // pre-dawn cron slots; node-cron doesn't replay them. See lib/job-state.ts +
@@ -363,7 +362,6 @@ export class Scheduler {
       runParkingMaintenance: () => this.runParkingMaintenance(),
       runMaintenanceLiveness: () => this.runMaintenanceLiveness(),
       runCheckpointMaintenance: () => this.runCheckpointMaintenance(),
-      runSkillLearningMaintenance: () => this.runSkillLearningMaintenance(),
       runLibraryRetrievalEvalGated: () => this.runLibraryRetrievalEvalGated(),
       runMaintenanceSupervisorTick: () => this.runMaintenanceSupervisorTick(),
     });
@@ -803,9 +801,6 @@ export class Scheduler {
     if (type === "checkpoint-maintenance") {
       return this.runCheckpointMaintenance();
     }
-    if (type === "skill-learning-maintenance") {
-      return this.runSkillLearningMaintenance();
-    }
     if (type === "library-retrieval-eval") {
       return this.runLibraryRetrievalEval();
     }
@@ -909,10 +904,6 @@ export class Scheduler {
 
   private async runCheckpointMaintenance(): Promise<{ status: string; content?: string; error?: string }> {
     return runCheckpointMaintenanceImpl(this.getCtx());
-  }
-
-  private async runSkillLearningMaintenance(): Promise<{ status: string; content?: string; error?: string }> {
-    return runSkillLearningMaintenanceImpl(this.getCtx());
   }
 
 

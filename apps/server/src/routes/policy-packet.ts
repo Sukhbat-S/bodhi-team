@@ -8,7 +8,10 @@ import type { AuditService } from "../lib/audit.js";
 
 let libraryDomainsCache: { domains: string[]; cachedAt: number } | null = null;
 const LIBRARY_DOMAINS_TTL_MS = 60_000;
-const RETIRED_ACTION_CLASS = /(?:^|_)(?:claude|subagent)(?:_|$)/i;
+const PROVIDER_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+// Retired *concepts*, never vendors (ADR-004 invariant 4). `run_code_task` was the
+// headless code runner; `update_claude_md` predates the thin-include rule, under which
+// a project CLAUDE.md is a fixed include of AGENTS.md, not a trust-tier decision.
 const RETIRED_EXACT_ACTION_CLASSES = new Set([
   "run_code_task",
   "update_claude_md",
@@ -17,10 +20,11 @@ const MAIN_PUSH_ACTION_CLASSES = new Set([
   "push_commit_main",
   "push_commit_main_bodhi",
   "push_commit_main_bodhi_verified",
-  "push_commit_main_jewelry_docs",
-  "push_commit_main_jewelry_verified",
 ]);
-const RETIRED_EXECUTION_CONTEXT = /\b(?:bodhi-(?:impl|scout|crit|security|ui|watch|learn)|subagent|claude|max 5×|luna|terra|sol\/medium)\b/i;
+// Model-routing and quota notes are harness configuration, not policy; they are
+// excluded by tag. No content or vendor-name filter: `bodhi-*` agent names are live
+// Claude Code subagents (ADR-004), and the packet must not branch on provider.
+const EXCLUDED_CONTEXT_TAGS = new Set(["model-routing", "quota"]);
 
 type PolicyTrustTier = { actionClass: string; tier: "auto-do" | "notify" | "await" };
 
@@ -37,29 +41,13 @@ export function resolveTrustTiersForProject(
   project: string,
   cwd: string,
 ): PolicyTrustTier[] {
-  const active = tiers.filter((tier) =>
-    !RETIRED_ACTION_CLASS.test(tier.actionClass)
-    && !RETIRED_EXACT_ACTION_CLASSES.has(tier.actionClass),
-  );
+  const active = tiers.filter((tier) => !RETIRED_EXACT_ACTION_CLASSES.has(tier.actionClass));
   const byClass = new Map(active.map((tier) => [tier.actionClass, tier]));
   const resolved = active.filter((tier) => !MAIN_PUSH_ACTION_CLASSES.has(tier.actionClass));
   const identity = `${project} ${cwd}`.toLowerCase();
-  const isJewelry = /jewelry|retail/.test(identity);
   const isBodhi = /(?:^|[\s/._-])bodhi(?:$|[\s/._-])/.test(identity);
 
-  if (isJewelry) {
-    const docs = byClass.get("push_commit_main_jewelry_docs");
-    const verified = byClass.get("push_commit_main_jewelry_verified");
-    const fallback = byClass.get("push_commit_main");
-    if (docs) resolved.push(docs);
-    if (verified) resolved.push(verified);
-    if (fallback) {
-      resolved.push({
-        actionClass: "push_commit_main_jewelry_unverified",
-        tier: fallback.tier,
-      });
-    }
-  } else if (isBodhi) {
+  if (isBodhi) {
     const bodhi = byClass.get("push_commit_main_bodhi_verified")
       ?? byClass.get("push_commit_main_bodhi");
     if (bodhi) resolved.push(bodhi);
@@ -108,6 +96,8 @@ export function mountPolicyPacketRoutes(app: Hono, deps: PolicyPacketRoutesDeps)
   app.get("/api/policy-packet", async (c) => {
     const project = (c.req.query("project") ?? "bodhi").slice(0, 64);
     const cwd = (c.req.query("cwd") ?? "").slice(0, 256);
+    const providerRaw = (c.req.query("provider") ?? "codex").toLowerCase();
+    const provider = PROVIDER_RE.test(providerRaw) ? providerRaw : "codex";
 
     const [tiers, preferences, decisions, libraryDomains] = await Promise.all([
       trustTiersService.list(),
@@ -118,8 +108,7 @@ export function mountPolicyPacketRoutes(app: Hono, deps: PolicyPacketRoutesDeps)
 
     const reviewedContext = [...preferences.memories, ...decisions.memories]
       .filter((memory) =>
-        !memory.tags?.some((tag) => tag === "model-routing" || tag === "quota")
-        && !RETIRED_EXECUTION_CONTEXT.test(memory.content),
+        !memory.tags?.some((tag) => EXCLUDED_CONTEXT_TAGS.has(tag)),
       )
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
       .slice(0, 10)
@@ -151,6 +140,7 @@ export function mountPolicyPacketRoutes(app: Hono, deps: PolicyPacketRoutesDeps)
       ],
       project,
       cwd,
+      provider,
       generatedAt: new Date().toISOString(),
     });
     return c.json(packet);

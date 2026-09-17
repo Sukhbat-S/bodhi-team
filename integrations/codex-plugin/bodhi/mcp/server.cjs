@@ -7206,13 +7206,12 @@ function resolveEnvPath(options = {}) {
   const home = options.home ?? (0, import_node_os.homedir)();
   const exists = options.exists ?? import_node_fs.existsSync;
   const explicit = options.explicit ?? process.env.BODHI_ENV_FILE?.trim();
-  const projectDirectory = options.projectDirectory ?? process.env.BODHI_PROJECT_DIR?.trim() ?? process.env.BODHI_PROJECT?.trim();
+  const projectDirectory = options.projectDirectory ?? process.env.BODHI_PROJECT_DIR?.trim() ?? process.env.BODHI_ROOT?.trim() ?? process.env.BODHI_PROJECT?.trim();
   if (explicit) return explicit;
   if (projectDirectory) return path.resolve(projectDirectory, ".env");
   const candidates = [
     path.resolve(cwd, ".env"),
-    path.resolve(home, "projects/owned/bodhi/.env"),
-    path.resolve(home, "Projects/owned/bodhi/.env"),
+    path.resolve(home, "bodhi/.env"),
     path.resolve(home, "Documents/bodhi/.env")
   ];
   return candidates.find(exists) ?? candidates[0];
@@ -21527,6 +21526,7 @@ var policyPacketSchema = Object.assign(external_exports.object({
   evidenceOrder: external_exports.array(external_exports.string()).min(1),
   project: external_exports.string(),
   cwd: external_exports.string(),
+  provider: external_exports.string().optional(),
   generatedAt: isoDateTime
 }), { priorFindingSchema, filterValidPriorFindings });
 
@@ -21641,8 +21641,9 @@ var PortfolioPolicyV1Schema = external_exports.object({
       "bodhi-goals",
       "bodhi-checkpoints",
       "bodhi-parking",
-      "bodhi-receipts"
-    ])).length(6),
+      "bodhi-receipts",
+      "native-claude-code-sessions"
+    ])).length(7),
     persist: external_exports.array(external_exports.enum([
       "durable-decisions",
       "durable-commitments",
@@ -21889,45 +21890,6 @@ async function resolveOpportunity(opportunityId, input) {
     body: JSON.stringify(input)
   });
   return result.ok ? renderStoredData(result.data, "opportunity") : result.error;
-}
-async function listWorkflowCandidates(input) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(input)) if (value !== void 0) params.set(key, String(value));
-  const result = await bodhiFetch(`/api/workflow-candidates${params.size ? `?${params}` : ""}`);
-  return result.ok ? renderStoredData(result.data, "workflow_candidate") : result.error;
-}
-async function resolveWorkflowCandidate(candidateId, input) {
-  const result = await bodhiFetch(`/api/workflow-candidates/${encodeURIComponent(candidateId)}/resolve`, {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
-  return result.ok ? renderStoredData(result.data, "workflow_candidate") : result.error;
-}
-async function recordSkillRun(input) {
-  const result = await bodhiFetch("/api/skill-learning/runs", {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
-  return result.ok ? renderStoredData(result.data, "skill_learning") : result.error;
-}
-async function listSkillUsage(input) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(input)) if (value !== void 0) params.set(key, String(value));
-  const result = await bodhiFetch(`/api/skill-learning/usage${params.size ? `?${params}` : ""}`);
-  return result.ok ? renderStoredData(result.data, "skill_usage") : result.error;
-}
-async function listSkillLearningCandidates(input) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(input)) if (value !== void 0) params.set(key, String(value));
-  const result = await bodhiFetch(`/api/skill-learning/candidates${params.size ? `?${params}` : ""}`);
-  return result.ok ? renderStoredData(result.data, "skill_learning_candidate") : result.error;
-}
-async function resolveSkillLearningCandidate(candidateId, input) {
-  const result = await bodhiFetch(`/api/skill-learning/candidates/${encodeURIComponent(candidateId)}/resolve`, {
-    method: "POST",
-    body: JSON.stringify(input)
-  });
-  return result.ok ? renderStoredData(result.data, "skill_learning_candidate") : result.error;
 }
 async function storeMemory(input) {
   const tags = [...input.tags ?? []];
@@ -22202,111 +22164,6 @@ server.registerTool("resolve_opportunity", {
   reason: input.reason,
   parkedItemId: input.parked_item_id
 })));
-server.registerTool("list_workflow_candidates", {
-  description: "List repeated workflows backed by at least three accepted and verified checkpoint outcomes.",
-  inputSchema: {
-    project: external_exports.string().optional(),
-    status: external_exports.enum(["candidate", "approved", "dismissed", "materialized"]).optional(),
-    limit: external_exports.coerce.number().int().min(1).max(100).optional().default(20)
-  }
-}, async (input) => textResult(await listWorkflowCandidates(input)));
-server.registerTool("resolve_workflow_candidate", {
-  description: "Approve, dismiss, or evidence materialization of one workflow candidate. Approval creates no files.",
-  inputSchema: {
-    candidate_id: external_exports.string().uuid(),
-    action: external_exports.enum(["approve", "dismiss", "materialize"]),
-    reason: external_exports.string().optional(),
-    checkpoint_id: external_exports.string().uuid().optional()
-  }
-}, async (input) => textResult(await resolveWorkflowCandidate(input.candidate_id, {
-  action: input.action,
-  reason: input.reason,
-  checkpointId: input.checkpoint_id
-})));
-var skillSignalSchema = external_exports.object({
-  type: external_exports.enum([
-    "correction",
-    "rejection",
-    "workaround",
-    "routing-miss",
-    "missing-context",
-    "stale-reference",
-    "quality-gap",
-    "verification-failure",
-    "safety-failure",
-    "agent-boundary"
-  ]),
-  learning_key: external_exports.string(),
-  change_type: external_exports.enum(["update", "split", "merge", "retire", "new-skill", "agent-evaluation"]),
-  severity: external_exports.enum(["ordinary", "material", "critical"]).optional(),
-  summary: external_exports.string()
-});
-server.registerTool("record_skill_run", {
-  description: "Record concrete sanitized learning signals. Clean runs create no receipt. An explicit checkpoint binds immutable outcome evidence; usage counts the provider/task/project/skill version once. Never include prompts, responses, reasoning, messages, transcripts, or tool output.",
-  inputSchema: {
-    project_key: external_exports.string(),
-    provider: external_exports.string().default("codex"),
-    native_task_id: external_exports.string(),
-    skill_name: external_exports.string(),
-    result_disposition: external_exports.enum(["accepted", "revised", "discarded", "failed"]),
-    verification_state: external_exports.enum(["passed", "failed", "not-required", "unverified"]),
-    checkpoint_id: external_exports.string().uuid().nullable().optional(),
-    external_skill_dependencies: external_exports.array(external_exports.string()).optional(),
-    completed_at: external_exports.string().optional(),
-    signals: external_exports.array(skillSignalSchema).max(10).optional()
-  }
-}, async (input) => textResult(await recordSkillRun({
-  projectKey: input.project_key,
-  provider: input.provider,
-  nativeTaskId: input.native_task_id,
-  skillName: input.skill_name,
-  resultDisposition: input.result_disposition,
-  verificationState: input.verification_state,
-  checkpointId: input.checkpoint_id,
-  externalSkillDependencies: input.external_skill_dependencies,
-  completedAt: input.completed_at,
-  signals: input.signals?.map((signal) => ({
-    type: signal.type,
-    learningKey: signal.learning_key,
-    changeType: signal.change_type,
-    severity: signal.severity,
-    summary: signal.summary
-  }))
-})));
-server.registerTool("list_skill_usage", {
-  description: "List compact usage aggregates for governed skills. Missing telemetry is unverified, never proof that a skill is unused.",
-  inputSchema: {
-    project: external_exports.string().optional(),
-    skill: external_exports.string().optional(),
-    version: external_exports.string().optional(),
-    since: external_exports.string().optional(),
-    limit: external_exports.coerce.number().int().min(1).max(100).optional().default(50)
-  }
-}, async (input) => textResult(await listSkillUsage(input)));
-server.registerTool("list_skill_learning_candidates", {
-  description: "List evidence-backed skill learning candidates without changing skills or approval state.",
-  inputSchema: {
-    project: external_exports.string().optional(),
-    skill: external_exports.string().optional(),
-    type: external_exports.enum(["update", "split", "merge", "retire", "new-skill", "agent-evaluation"]).optional(),
-    severity: external_exports.enum(["ordinary", "material", "critical"]).optional(),
-    status: external_exports.enum(["candidate", "approved", "dismissed", "materialized"]).optional(),
-    limit: external_exports.coerce.number().int().min(1).max(100).optional().default(20)
-  }
-}, async (input) => textResult(await listSkillLearningCandidates(input)));
-server.registerTool("resolve_skill_learning_candidate", {
-  description: "Approve, dismiss, or evidence materialization of one skill learning candidate. Approval never edits skill or agent files.",
-  inputSchema: {
-    candidate_id: external_exports.string().uuid(),
-    action: external_exports.enum(["approve", "dismiss", "materialize"]),
-    reason: external_exports.string().optional(),
-    checkpoint_id: external_exports.string().uuid().optional()
-  }
-}, async (input) => textResult(await resolveSkillLearningCandidate(input.candidate_id, {
-  action: input.action,
-  reason: input.reason,
-  checkpointId: input.checkpoint_id
-})));
 var checkpointDecisionSchema = external_exports.object({
   text: external_exports.string(),
   madeAt: external_exports.string().optional(),
@@ -22576,7 +22433,8 @@ server.registerTool("list_parked", {
 }, async ({ status }) => textResult(await listParked({ status })));
 async function main() {
   await server.connect(new StdioServerTransport());
-  console.error("[bodhi-mcp] Pure-substrate server started (30 tools)");
+  const registered = Object.keys(server._registeredTools ?? {}).length;
+  console.error(`[bodhi-mcp] Pure-substrate server started${registered > 0 ? ` (${registered} tools)` : ""}`);
 }
 main().catch((error2) => {
   console.error("[bodhi-mcp] Fatal error:", error2);

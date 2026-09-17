@@ -1,7 +1,0 @@
-# GENERATED from configs/skill-matrix.json — do not edit.
-interface:
-  display_name: "Skill evolution"
-  short_description: "Records and reviews governed skill learning."
-  default_prompt: "Use $skill-evolution to review evidence-backed skill learning candidates."
-policy:
-  allow_implicit_invocation: false

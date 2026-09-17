@@ -27,7 +27,6 @@ export interface SchedulerCronRegistrationHost {
   runParkingMaintenance(): unknown;
   runMaintenanceLiveness(): unknown;
   runCheckpointMaintenance(): unknown;
-  runSkillLearningMaintenance(): unknown;
   runLibraryRetrievalEvalGated(): unknown;
   runMaintenanceSupervisorTick(): unknown;
 }

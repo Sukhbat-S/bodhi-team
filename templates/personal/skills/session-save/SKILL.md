@@ -1,19 +1,23 @@
 ---
 name: session-save
-description: Save one explicitly identified personal BODHI outcome when the owner invokes $session-save, using client-owned checkpoint identity, compare-and-swap updates, explicit verification lineage, and a frozen completion manifest.
+description: Saves one explicitly identified outcome to BODHI: client-owned checkpoint identity, compare-and-swap updates, artifact references, verification lineage, and a frozen completion manifest. Explicitly invoked as $session-save.
 ---
 
 # Save one explicit outcome
 
-Run only after explicit `$session-save` invocation. The invocation authorizes the bounded continuity
-writes below; it does not authorize another task, external action, publication, deployment,
-migration, destructive change, or memory outside the active capture policy.
+Run only after an explicit request for session saving, including `$session-save` or its natural-language equivalent. The invocation authorizes the bounded BODHI
+continuity writes below; it does not authorize another task, external action, publication,
+deployment, migration, destructive change, or memory outside the capture boundary.
 
 ## 1. Ground identity before writing
 
-Identify the exact native Codex task, provider, outcome, project namespace, repository or artifact
+Identify the exact native task (Codex or Claude Code), provider, outcome, project namespace, repository or artifact
 state, decisions, unresolved commitments, and emitted verification. Treat task titles and summaries
-as labels, never identity. Preserve unrelated owner changes.
+as labels, never identity. Preserve unrelated user changes. Use the injected `BODHI_PROVIDER` value (`codex` or `claude-code`), the exact current native task ID, and its canonical `project_key` for each scoped outcome. Another project checkpoint for the same native task is valid and independent.
+
+For ordinary in-place work with no durable outcome, report `no target checkpoint required`. This is normal, not `target binding unavailable`. A separate task needs an exact runtime binding, not an automatic checkpoint. Report a missing checkpoint only when an explicitly approved workflow required that exact outcome to exist; never invent another identity.
+
+Never re-derive ownership from a human title, change a checkpoint's project key, or attach work by fuzzy identity. Never attach one project's work to another project's checkpoint. Keep files inside the exact repository/worktree or the installation-declared artifact root for `<project-key>`. Never copy an artifact body into BODHI.
 
 Resolve only enumerated project keys and approved aliases through the shared project-identity policy.
 For an explicit unknown namespace, preserve its spelling, case, Unicode, separators, and embedded
@@ -28,6 +32,9 @@ checkpoint is required and perform no continuity or learning write.
 Use one checkpoint UUID as the durable outcome identity. Never choose an outcome by title, objective
 similarity, recency, task liveness, or a terminal checkpoint with the same objective.
 
+When the user explicitly includes several outcomes, repeat this protocol independently for each
+identified outcome and project. Do not expand a single-outcome request to every project in the task.
+
 1. For a new outcome, generate one client UUID and retain it across retries. Call `save_checkpoint`
    with `mode: create`, that `checkpoint_id`, the exact `project_key`, immutable `objective`, and
    exact provider/task reference. Send no summary, decisions, actions, or other content in this
@@ -37,8 +44,11 @@ similarity, recency, task liveness, or a terminal checkpoint with the same objec
    `expected_current_checkpoint_id` set to the observed UUID or explicit `null`. Send no content
    fields. Selection replay is idempotent; a different current target conflicts.
 3. Read the exact checkpoint UUID and retain its returned `contentHash`. Call `mode: update` with
-   the same `checkpoint_id`, the unchanged `objective` from exact readback, full intended nonterminal content, and `expected_content_hash`
-   (`expectedContentHash` in the HTTP contract). On a conflict, reload and reconcile; never
+   the same `checkpoint_id`, the **unchanged `objective` from that readback**, full intended
+   nonterminal content, and `expected_content_hash`
+   (`expectedContentHash` in the HTTP contract). The current API requires `objective` on
+   update even though the shared MCP schema marks it optional for other modes. Omit it
+   from select commands. On a conflict, reload and reconcile; never
    overwrite a concurrent generation or select another
    outcome. Explicit update and completion do not change current selection.
 
@@ -70,7 +80,10 @@ matching prose or timestamps, branch lineage, or mutate an existing receipt.
 
 ## 4. Complete with a frozen manifest
 
-If required work remains, keep the outcome paused and skip completion. Finishing a save does not finish the underlying task.
+Completion is conditional. If required work remains, save the exact outcome as `paused`,
+retain its next actions, and skip `complete_checkpoint`. Finishing the save operation
+does not finish the underlying outcome. Use deferred completion only when the bounded
+objective itself is achieved and separate follow-up work is explicitly deferred.
 
 After all artifacts and required claim receipts read back, call `complete_checkpoint` once with the
 exact outcome UUID, summary, remaining-work disposition, verification state, and
@@ -94,12 +107,6 @@ decisions, goals, and commitments that materially help future work. Deduplicate 
 origin provenance. Review inferred, sensitive, ambiguous, or third-party material with the owner.
 Never store transcripts, prompts, reasoning, credentials, raw private messages, intimate facts,
 uncertain dictation, temporary task state, or unrelated information.
-
-Invoke `$skill-evolution` only when this save produced a concrete correction, failed write/readback,
-routing defect, safety issue, or workaround. Pass this exact checkpoint UUID when the receipt belongs
-to the durable outcome. BODHI never attaches an earlier unbound receipt automatically. Bound receipt
-replay is immutable; a different outcome uses its own checkpoint. A clean save or normal
-no-checkpoint result creates no learning receipt or write.
 
 ## 6. Return a compact receipt
 

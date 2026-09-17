@@ -1,0 +1,7 @@
+# Owner-neutral personal-install metadata.
+interface:
+  display_name: "UI polish"
+  short_description: "Fixes radius, shadows, icons and press feedback to exact values."
+  default_prompt: "Use $better-ui to polish this interface to exact radius, shadow, icon and hit-area values."
+policy:
+  allow_implicit_invocation: true

@@ -2,37 +2,17 @@
 // BODHI — memory coupling (Phase 33 B1, May 25, 2026)
 //
 // Sparse Γᵢⱼ matrix: cosine similarity between memory embeddings,
-// thresholded at COUPLING_THRESHOLD. Used by MemorySynthesizer's
-// decay+sustenance step.
+// thresholded at COUPLING_THRESHOLD.
 //
 // LMD metabolism.py:93-101 — the one structurally novel idea.
 // ============================================================
 
 export const COUPLING_THRESHOLD = 0.30;
 
-// Wave 6 (Jul 2026) — scope-aware decay rates. The rate d is the per-run pull
-// toward the neighbor-mean sustenance: newConf = conf·(1−d) + s̄·d, so d only
-// sets convergence SPEED (steady state is s̄ either way). Choices:
-//   foundational  → HALF rate, not exempt: a genuinely-wrong foundational
-//                   memory must still be able to fade (demoteStaleFoundational
-//                   + architect edits are the fast correction paths; a full
-//                   exemption would make a bad foundational row immortal).
-//   archived      → 1.5× rate: explicitly closed/parked, fade faster.
-//   session-active → unchanged 0.05 baseline (also the no-scope legacy default,
-//                   which keeps pre-Wave-6 callers/fixtures byte-identical).
-export const DECAY_RATE_BY_SCOPE = {
-  foundational: 0.025,
-  "session-active": 0.05,
-  archived: 0.075,
-} as const;
-
 export interface MemoryEmbedding {
   id: string;
   confidence: number;
   embedding: number[] | null;
-  // §2.6 authority tier (Wave 6): drives the scope-aware decay rate above.
-  // Optional — absent (legacy callers/tests) decays at the baseline rate.
-  scope?: "foundational" | "session-active" | "archived";
 }
 
 /**
@@ -81,46 +61,6 @@ export function computeCoupling(memories: MemoryEmbedding[]): Map<string, Map<st
   }
 
   return coupling;
-}
-
-/**
- * Apply decay-with-sustenance (scope-aware since Wave 6, Jul 2026):
- *   confidence_i_new = confidence_i_old * (1 - d_i)
- *                    + mean_j( Γ_ij * confidence_j_old ) * d_i
- * where d_i = DECAY_RATE_BY_SCOPE[scope_i] (0.05 baseline — the historical
- * 0.95/0.05 split — halved for foundational, 1.5× for archived).
- * Result clamped to [0, 1].
- */
-export function applyDecayWithSustenance(
-  memories: MemoryEmbedding[],
-  coupling: Map<string, Map<string, number>>,
-): Map<string, number> {
-  const newConfidences = new Map<string, number>();
-  const oldConfidences = new Map<string, number>(memories.map((m) => [m.id, m.confidence]));
-
-  for (const m of memories) {
-    let sustenance = 0;
-    const neighbors = coupling.get(m.id);
-    if (neighbors) {
-      for (const [neighborId, similarity] of neighbors) {
-        const neighborConf = oldConfidences.get(neighborId) ?? 0;
-        sustenance += similarity * neighborConf;
-      }
-      // Normalize to the neighbor MEAN: the summed term is unbounded (grows with
-      // neighbor count), so newConf saturated at the 1.0 clamp and the
-      // write-if-changed guard skipped every row. Mean-normalizing bounds
-      // sustenance to [0,1] → newConf ∈ [0.95, 1.0]. Guard count===0 → 0.
-      const count = neighbors.size;
-      sustenance = count > 0 ? sustenance / count : 0;
-    }
-    // Wave 6: scope-scaled rate. Unknown/absent scope → baseline (the ?? guard
-    // covers rows whose scope string predates or escapes the enum).
-    const d = DECAY_RATE_BY_SCOPE[m.scope ?? "session-active"] ?? DECAY_RATE_BY_SCOPE["session-active"];
-    const newConf = m.confidence * (1 - d) + sustenance * d;
-    newConfidences.set(m.id, Math.max(0, Math.min(1, newConf)));
-  }
-
-  return newConfidences;
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {

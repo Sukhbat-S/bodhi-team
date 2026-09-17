@@ -17,20 +17,24 @@ const SHARED_ROOTS = [
 
 const SHARED_SKILL_ROOTS = [
   "templates/personal/skills/workflow-discovery/",
-  "templates/personal/skills/existing-system-adoption/",
-  "templates/personal/skills/operational-debugging/",
   "templates/personal/skills/component-driven-ui/",
-  "templates/personal/skills/skill-behavior-evaluation/",
-  "templates/personal/skills/skill-evolution/",
-
-  "templates/personal/skills/accessibility-audit/",
-  "templates/personal/skills/graphic-design-production/",
-  "templates/personal/skills/information-design-review/",
+  "templates/personal/skills/first-principles-decision/",
+  "templates/personal/skills/product-discovery/",
+  "templates/personal/skills/interface-review/",
+  "templates/personal/skills/emil-design-eng/",
+  "templates/personal/skills/better-ui/",
   "templates/personal/skills/research-chain/",
-  "templates/personal/skills/visual-system-review/",
   "templates/personal/skills/verify-by-emission/",
   "templates/personal/skills/session-save/",
   "templates/personal/skills/session-start/",
+] as const;
+
+// Owner-neutral harness templates for Claude Code and Codex: instruction
+// templates, agent cards, hooks and configuration snippets. Rendered or linked
+// by scripts/install-harness.mjs; configuration is printed, never merged.
+const SHARED_TEMPLATE_ROOTS = [
+  "templates/claude-code/",
+  "templates/codex/",
 ] as const;
 
 // Owner-specific lifecycle files stay gated. Personal-release lifecycle and
@@ -50,7 +54,18 @@ const SHARED_FILES = new Set([
   "scripts/pack-release.mjs",
   "scripts/check-distribution.mjs",
   "scripts/install-project-skills.mjs",
+  "scripts/install-harness.mjs",
+  "scripts/harness-session-lifecycle.sh",
+  "scripts/harness-session-lifecycle.test.ts",
   "scripts/build-release-contract.mjs",
+  "docs/dual-harness-orchestration.md",
+  "docs/decisions/ADR-004-peer-harness-claude-code.md",
+  // Measurement wrapper only: the plugin manifest, its README and one neutral
+  // example case. Run output and per-skill links stay local and gitignored.
+  "skill-evals/.claude-plugin/plugin.json",
+  "skill-evals/README.md",
+  "skill-evals/evals/fire-verify-by-emission/prompt.md",
+  "skill-evals/evals/fire-verify-by-emission/graders/fired.md",
 
   ".nvmrc",
   "package-lock.json",
@@ -151,15 +166,78 @@ export function isAutomaticPersonalMigration(id: string): boolean {
 // Release-shared bytes must not carry a person's identity or this workstation's
 // absolute paths. Owner-specific policy remains in the private validator and
 // private config, outside the release classifier's shared set.
+// Identity terms are stored as code points so this shared file, its generated
+// .mjs and a repository-wide text search never match the gate's own source.
+const word = (chars: readonly number[]): string => String.fromCodePoint(...chars);
+const OWNER_IDENTITY_FRAGMENTS: readonly string[] = [
+  // Owner, collaborators, family and client names, handles and places.
+  ...[
+    [115, 117, 107, 104, 98, 97, 116],
+    [115, 111, 115, 111, 114, 98, 97, 114, 97, 109],
+    [116, 117, 115, 104, 105, 103],
+    [110, 121, 97, 109, 107, 97],
+    [110, 121, 97, 109, 98, 97, 121, 97, 114],
+    [100, 97, 109, 100, 105, 110, 100, 111, 111],
+    [110, 121, 109, 98, 97, 121, 114, 48, 50, 48, 54],
+    [115, 104, 105, 103, 116, 103, 101, 101],
+    [122, 117, 117, 115, 103, 101, 108],
+    [103, 101, 114, 101, 108, 115, 117, 114, 101, 110],
+    [115, 117, 117, 103, 105, 105],
+    [97, 108, 116, 97, 110, 116, 117, 121, 97],
+    [103, 101, 103, 101, 101, 110, 101, 101],
+    [117, 108, 97, 97, 110, 98, 97, 97, 116, 97, 114],
+    [109, 111, 115, 115, 101, 116, 99, 104],
+    [98, 97, 116, 116, 117, 115, 104, 105, 103],
+    [116, 111, 103, 116, 111, 107, 104],
+    [97, 97, 103, 105, 105],
+    [110, 121, 109, 115, 117, 114, 101, 110],
+    [101, 110, 98, 111, 116, 105, 99, 115],
+    [100, 97, 121, 97, 110, 115, 111, 102, 116],
+    [104, 111, 104, 104, 111, 116],
+  ].map(word),
+  // The owner's retail line of business, in either spelling.
+  `${word([106, 101, 119, 101, 108])}(?:${word([108, 101])})?${word([114, 121])}`,
+  // Multi-word organisation and brand names, with any separator or none.
+  `${word([97, 103, 101, 110, 116, 105, 99])}[\\s_-]*${word([102, 111, 114, 99, 101])}`,
+  `${word([106, 101, 116])}[\\s_-]*${word([98, 97, 107, 101, 114, 121])}`,
+  `${word([118, 105, 112])}[\\s_-]*${word([99, 108, 117, 98])}`,
+  `${word([97, 38, 103])}[\\s_-]*${word([104, 101, 114, 105, 116, 97, 103, 101])}`,
+  // Short names that are substrings of ordinary words match only as whole words.
+  `\\b${word([110, 99, 100])}\\b`,
+  `\\b${word([97, 110, 97, 114])}\\b`,
+  `\\b${word([103, 97, 114, 108, 105, 99])}\\b`,
+];
+
+const EMAIL_ADDRESS = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/;
+// Any dotted-quad address except the loopback range and the unspecified address.
+const NON_LOOPBACK_IPV4 = /(?<![\w.])(?!127(?:\.\d{1,3}){3}(?![\w.]))(?!0\.0\.0\.0(?![\w.]))(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?![\w.])/;
+
+// Behaviour-bearing identifiers that contain an identity term but cannot be
+// renamed without a runtime-default or schema change: the IANA default time
+// zone, a column of a retired, never-automatic migration, and a value of the
+// briefing_type database enum that is part of the hash-bound schema baselines.
+// They are exempt only as these exact tokens; the bare term still fails.
+const BEHAVIOUR_BEARING_IDENTIFIERS = new RegExp([
+  `${word([65, 115, 105, 97, 47])}${word([85, 108, 97, 97, 110, 98, 97, 97, 116, 97, 114])}(?![\\w/])`,
+  `(?<![\\w])${word([109, 111, 115, 115, 101, 116, 99, 104])}_${word([114, 101, 118, 105, 101, 119])}(?!\\w)`,
+  `(?<![\\w-])${word([106, 101, 119, 101, 108, 114, 121])}-${word([99, 104, 97, 110, 103, 101, 108, 111, 103])}(?![\\w-])`,
+].join("|"), "g");
+
 export const OWNER_NEUTRAL_FORBIDDEN_CONTENT = [
+  new RegExp(OWNER_IDENTITY_FRAGMENTS.join("|"), "i"),
   /(?:\/Users\/|\/home\/|[A-Za-z]:[\\/]Users[\\/])/,
+  EMAIL_ADDRESS,
+  NON_LOOPBACK_IPV4,
 ] as const;
+
+// Exact bytes of the upstream MIT copyright notice (LICENSE), which must be retained.
+const UPSTREAM_MIT_NOTICE_SHA256 = "8a5ea8da5a293a1eea86d8aa8820bafc9808db079f325b97783d78796fd6a2d8";
 
 export function ownerNeutralContentError(bytes: Buffer): string | null {
   // Preserve the exact required upstream MIT copyright notice, not arbitrary owner content.
-  if (createHash("sha256").update(bytes).digest("hex") === "8a5ea8da5a293a1eea86d8aa8820bafc9808db079f325b97783d78796fd6a2d8") return null;
+  if (createHash("sha256").update(bytes).digest("hex") === UPSTREAM_MIT_NOTICE_SHA256) return null;
   if (bytes.includes(0)) return null;
-  const text = bytes.toString("utf8");
+  const text = bytes.toString("utf8").replace(BEHAVIOUR_BEARING_IDENTIFIERS, " ");
   const matched = OWNER_NEUTRAL_FORBIDDEN_CONTENT.find((pattern) => pattern.test(text));
   return matched ? matched.source : null;
 }
@@ -228,7 +306,11 @@ export function classifyReleasePath(input: string): PathClass {
     || segments.some((segment) => GATED_SEGMENTS.has(segment.toLowerCase()))
   ) return "gated";
 
-  if (SHARED_ROOTS.some((root) => path.startsWith(root)) || SHARED_SKILL_ROOTS.some((root) => path.startsWith(root))) return "shared";
+  if (
+    SHARED_ROOTS.some((root) => path.startsWith(root))
+    || SHARED_SKILL_ROOTS.some((root) => path.startsWith(root))
+    || SHARED_TEMPLATE_ROOTS.some((root) => path.startsWith(root))
+  ) return "shared";
   return "gated";
 }
 

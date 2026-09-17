@@ -3,25 +3,7 @@
   "userCanonicalRoot": "templates/personal/skills",
   "skills": [
     {
-      "name": "accessibility-audit",
-      "scope": "repo",
-      "status": "promoted",
-      "learningRole": "tracked"
-    },
-    {
-      "name": "graphic-design-production",
-      "scope": "repo",
-      "status": "promoted",
-      "learningRole": "tracked"
-    },
-    {
-      "name": "information-design-review",
-      "scope": "repo",
-      "status": "promoted",
-      "learningRole": "tracked"
-    },
-    {
-      "name": "research-chain",
+      "name": "session-start",
       "scope": "repo",
       "status": "promoted",
       "learningRole": "tracked"
@@ -33,19 +15,25 @@
       "learningRole": "tracked"
     },
     {
-      "name": "session-start",
-      "scope": "repo",
-      "status": "promoted",
-      "learningRole": "tracked"
-    },
-    {
       "name": "verify-by-emission",
       "scope": "repo",
       "status": "promoted",
       "learningRole": "tracked"
     },
     {
-      "name": "visual-system-review",
+      "name": "research-chain",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "first-principles-decision",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
+    },
+    {
+      "name": "product-discovery",
       "scope": "repo",
       "status": "promoted",
       "learningRole": "tracked"
@@ -57,34 +45,28 @@
       "learningRole": "tracked"
     },
     {
-      "name": "existing-system-adoption",
-      "scope": "repo",
-      "status": "promoted",
-      "learningRole": "tracked"
-    },
-    {
-      "name": "operational-debugging",
-      "scope": "repo",
-      "status": "promoted",
-      "learningRole": "tracked"
-    },
-    {
       "name": "component-driven-ui",
       "scope": "repo",
       "status": "promoted",
       "learningRole": "tracked"
     },
     {
-      "name": "skill-behavior-evaluation",
+      "name": "interface-review",
       "scope": "repo",
       "status": "promoted",
       "learningRole": "tracked"
     },
     {
-      "name": "skill-evolution",
+      "name": "emil-design-eng",
       "scope": "repo",
       "status": "promoted",
-      "learningRole": "controller"
+      "learningRole": "tracked"
+    },
+    {
+      "name": "better-ui",
+      "scope": "repo",
+      "status": "promoted",
+      "learningRole": "tracked"
     }
   ]
 }

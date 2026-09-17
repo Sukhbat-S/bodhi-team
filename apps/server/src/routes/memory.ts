@@ -392,8 +392,9 @@ export function mountMemoryRoutes(app: Hono, deps: MemoryRoutesDeps): Hono {
     const limit = parseInt(c.req.query("limit") || "10");
     // Wave 11 follow-up (2026-05-24): optional ?tag= filters retrieval to a
     // project. MCP search_memories tool passes the calling session's project
-    // here to prevent cross-project memory bleed (jewelry session retrieving
-    // BODHI memories ranked by embedding similarity). Omit for current behavior.
+    // here to prevent cross-project memory bleed (one project's session retrieving
+    // another project's memories ranked by embedding similarity). Omit for
+    // current behavior.
     const tag = c.req.query("tag") || undefined;
     const results = await memoryService.retrieve(q, limit, tag);
     return c.json({ memories: results });

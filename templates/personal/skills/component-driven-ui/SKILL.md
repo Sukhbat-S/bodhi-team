@@ -1,6 +1,6 @@
 ---
 name: component-driven-ui
-description: Build or redesign interfaces through reusable components, explicit states, and page integration when component-first work is requested or an existing component workbench is relevant. Use for interactive product UI; not one-off graphics, a tiny CSS fix, or a mandatory Storybook installation for every page.
+description: Builds product UI as shared components with their real states, then integrates the actual pages against them. Use for "make this a real component", "every page has its own version of this button", "add the loading, empty and error states", "redesign these screens on one shared foundation", "build it in the workbench first".
 ---
 
 # Component-driven UI
@@ -40,7 +40,3 @@ When the user’s direction covers integration, reuse the reviewed component in 
 Open the review on the user’s chosen surface when requested; use verify-by-emission to distinguish a queued request from visible delivery. Provide the exact review link and meaningful limits. Summarize what changed, what was observed, what remains undecided and the next smallest integration step.
 
 This workflow does not grant deployment, publication, account or payment authority. Apply the current user authorization and exact project policy at the actual external action; do not add another gate to already-authorized local work.
-
-## Governed learning
-
-Use $skill-evolution only for a concrete skill guidance or execution gap, with its consequence and reusable correction. A product bug correctly caught or a normal visual iteration is not automatically skill learning. Clean runs write nothing.

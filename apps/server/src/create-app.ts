@@ -24,8 +24,6 @@ import { mountCheckpointRoutes } from "./routes/checkpoints.js";
 import { createCheckpointService } from "./services/checkpoints.js";
 import { mountPersonalDirectionRoutes } from "./routes/personal-direction.js";
 import { createPersonalDirectionService } from "./services/personal-direction.js";
-import { mountSkillLearningRoutes } from "./routes/skill-learning.js";
-import { createSkillLearningService } from "./services/skill-learning.js";
 import { mountLegacyCompatibilityRoutes } from "./routes/legacy-compatibility.js";
 import type { Runtime } from "./runtime.js";
 
@@ -196,7 +194,6 @@ export function createApp(runtime: Runtime, options: CreateAppOptions = {}) {
   mountParkingRoutes(app, { db });
   mountCheckpointRoutes(app, { checkpointService: createCheckpointService(db) });
   mountPersonalDirectionRoutes(app, createPersonalDirectionService(db));
-  mountSkillLearningRoutes(app, createSkillLearningService(db));
   // Compatibility release: old orchestration endpoints remain discoverable but
   // cannot read or write legacy operational state. Every method returns 410 with
   // a native Codex/checkpoint replacement pointer.

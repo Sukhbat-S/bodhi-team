@@ -1,7 +1,0 @@
-# Owner-neutral personal-install metadata.
-interface:
-  display_name: "Visual system review"
-  short_description: "Reviews typography, color, tokens, and visual identity."
-  default_prompt: "Use $visual-system-review to evaluate this interface's typography, color, spacing, tokens, personality, and cross-surface coherence."
-policy:
-  allow_implicit_invocation: true

@@ -48,6 +48,7 @@ export const policyPacketSchema = Object.assign(z.object({
   evidenceOrder: z.array(z.string()).min(1),
   project: z.string(),
   cwd: z.string(),
+  provider: z.string().optional(),
   generatedAt: isoDateTime,
 }), { priorFindingSchema, filterValidPriorFindings });
 

@@ -1,8 +1,11 @@
 #!/usr/bin/env node
-import {symlinkSync,existsSync,mkdirSync,readdirSync,readFileSync} from 'node:fs';
-import {resolve} from 'node:path';
-const root=process.cwd();const apply=process.argv.includes('--apply');
-const names=JSON.parse(readFileSync('configs/personal-skill-matrix.json','utf8')).skills.map(x=>x.name);
-for(const name of names){const target=resolve(root,'.agents/skills',name);if(existsSync(target))throw Error(`Refusing to overwrite existing project skill: ${name}`);}
-console.log(`${apply?'Installing':'Would install'} ${names.length} owner-neutral project skills. No global skill directory is changed.`);
-if(apply){mkdirSync(resolve(root,'.agents/skills'),{recursive:true});for(const name of names)symlinkSync('../../templates/personal/skills/'+name,resolve(root,'.agents/skills',name),'dir');}
+// Link the owner-neutral skill templates into project skill discovery.
+// Kept for `npm run skills:install`; the harness installer owns the logic:
+// dry run by default, --apply to write, idempotent, and retired skill links are pruned.
+// Defaults to Codex project discovery (.agents/skills); pass --harness both for .claude/skills too.
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+const args=process.argv.slice(2);
+const installer=fileURLToPath(new URL('./install-harness.mjs',import.meta.url));
+const result=spawnSync(process.execPath,[installer,'--skills-only',...(args.some(a=>a==='--harness'||a.startsWith('--harness='))?[]:['--harness','codex']),...args],{stdio:'inherit'});
+process.exitCode=result.status??1;

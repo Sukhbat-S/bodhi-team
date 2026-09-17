@@ -134,6 +134,11 @@ if ! launchctl bootstrap "$DOMAIN" "$TARGET"; then
   launchctl load -w "$TARGET"
 fi
 
+# launchd can defer a RunAtLoad spawn ("pended nondemand spawn = speculative"),
+# leaving the job loaded with zero runs until the health wait expires. A
+# kickstart forces the first run. Never clears a foreign job.
+launchctl kickstart "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+
 for _ in $(seq 1 "$TIMEOUT"); do
   if "$NODE_BIN" "$OWNER_HELPER" assert "$BODHI_DIR" "$LABEL" "$PORT_VALUE" >/dev/null 2>&1 \
     && launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 \

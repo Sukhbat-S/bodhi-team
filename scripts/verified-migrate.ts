@@ -940,8 +940,8 @@ export function topLevelStructureViolationRegex(src: string): string | null {
 //
 // Threat before this block: `spawnSync("npx",["tsx",target],{env:process.env})`
 // gave the child EVERY secret in process.env (Anthropic/Voyage/Telegram/Google/
-// Supabase keys, the API bearer token) AND, because the DB role is the superuser
-// `macbookpro`, the SQL `COPY … FROM PROGRAM 'cmd'` primitive = OS command
+// Supabase keys, the API bearer token) AND, because the DB role is the local
+// superuser, the SQL `COPY … FROM PROGRAM 'cmd'` primitive = OS command
 // execution. A single gate miss therefore = full credential theft + RCE.
 //
 // Two active containment layers (defense-in-depth). A least-priv DB role is a

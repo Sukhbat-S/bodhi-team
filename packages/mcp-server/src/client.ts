@@ -352,51 +352,6 @@ export async function resolveOpportunity(opportunityId: string, input: Record<st
   return result.ok ? renderStoredData(result.data, "opportunity") : result.error;
 }
 
-export async function listWorkflowCandidates(input: Record<string, unknown>): Promise<string> {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(input)) if (value !== undefined) params.set(key, String(value));
-  const result = await bodhiFetch<unknown>(`/api/workflow-candidates${params.size ? `?${params}` : ""}`);
-  return result.ok ? renderStoredData(result.data, "workflow_candidate") : result.error;
-}
-
-export async function resolveWorkflowCandidate(candidateId: string, input: Record<string, unknown>): Promise<string> {
-  const result = await bodhiFetch<unknown>(`/api/workflow-candidates/${encodeURIComponent(candidateId)}/resolve`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-  return result.ok ? renderStoredData(result.data, "workflow_candidate") : result.error;
-}
-
-export async function recordSkillRun(input: Record<string, unknown>): Promise<string> {
-  const result = await bodhiFetch<unknown>("/api/skill-learning/runs", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-  return result.ok ? renderStoredData(result.data, "skill_learning") : result.error;
-}
-
-export async function listSkillUsage(input: Record<string, unknown>): Promise<string> {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(input)) if (value !== undefined) params.set(key, String(value));
-  const result = await bodhiFetch<unknown>(`/api/skill-learning/usage${params.size ? `?${params}` : ""}`);
-  return result.ok ? renderStoredData(result.data, "skill_usage") : result.error;
-}
-
-export async function listSkillLearningCandidates(input: Record<string, unknown>): Promise<string> {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(input)) if (value !== undefined) params.set(key, String(value));
-  const result = await bodhiFetch<unknown>(`/api/skill-learning/candidates${params.size ? `?${params}` : ""}`);
-  return result.ok ? renderStoredData(result.data, "skill_learning_candidate") : result.error;
-}
-
-export async function resolveSkillLearningCandidate(candidateId: string, input: Record<string, unknown>): Promise<string> {
-  const result = await bodhiFetch<unknown>(`/api/skill-learning/candidates/${encodeURIComponent(candidateId)}/resolve`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-  return result.ok ? renderStoredData(result.data, "skill_learning_candidate") : result.error;
-}
-
 export async function storeMemory(input: {
   content: string;
   type?: string;

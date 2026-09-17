@@ -53,7 +53,6 @@ export const STALENESS_THRESHOLDS: Partial<Record<SchedulerJobType, number>> = {
   "system-events-retention": 26 * HOUR,
   "parking-maintenance": 26 * HOUR,
   "checkpoint-maintenance": 26 * HOUR,
-  "skill-learning-maintenance": 26 * HOUR,
   // Daily, opt-in (only contributes when RETRIEVAL_EVAL_ENABLED=true).
   "retrieval-eval": 26 * HOUR,
   // Weekly.

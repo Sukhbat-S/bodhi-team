@@ -1,0 +1,19 @@
+{
+  "description": "BODHI task identity for Codex sessions. Merge into ~/.codex/hooks.json; Codex asks you to trust the hook on first run.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$BODHI_ROOT/scripts/harness-session-lifecycle.sh\" codex",
+            "timeout": 5,
+            "statusMessage": "Resolving BODHI task identity",
+            "additionalContextLimit": 1000
+          }
+        ]
+      }
+    ]
+  }
+}

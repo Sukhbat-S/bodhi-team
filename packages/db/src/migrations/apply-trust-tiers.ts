@@ -27,8 +27,6 @@ const SEEDS: Array<[string, string, string]> = [
   // [action_class, tier, note]
   ["push_commit_main", "await", "Conservative fallback for unknown repos and unverified deploy-surface changes; project-specific rows take precedence"],
   ["push_commit_main_bodhi", "auto-do", "BODHI is local and single-user; verified main changes do not create a customer-facing deployment"],
-  ["push_commit_main_jewelry_docs", "auto-do", "Documentation-only jewelry-platform main changes"],
-  ["push_commit_main_jewelry_verified", "auto-do", "End-to-end verified jewelry-platform changes with persisted or emitted read-back"],
   ["push_commit_branch", "notify", "Branch pushes are lower-stakes than main"],
   ["apply_supabase_migration_self_authored", "auto-do", "feedback_apply_migrations_via_mcp — apply via MCP immediately"],
   ["apply_supabase_migration_external", "await", "Externally authored migrations need explicit owner approval"],

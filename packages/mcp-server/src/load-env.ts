@@ -1,12 +1,15 @@
 // ============================================================
 // BODHI MCP Server — environment bootstrap.
-// The native Codex MCP subprocess reads the monorepo `.env`, keeping the
-// localhost URL and bearer token out of harness configuration files.
+// The harness MCP subprocess (Codex or Claude Code) reads the BODHI `.env`,
+// keeping the localhost URL and bearer token out of harness configuration files.
 //
 // Import before ./client.js. The client also reads the token per request.
 //
-// Installed plugins set BODHI_ENV_FILE explicitly because their executable
-// lives in the plugin cache. Direct repository launches fall back to cwd.
+// Resolution order: BODHI_ENV_FILE, then BODHI_PROJECT_DIR / BODHI_ROOT /
+// BODHI_PROJECT (a checkout directory), then `.env` in the working directory,
+// then the generic ~/bodhi and ~/Documents/bodhi checkouts. Register the server
+// with BODHI_ENV_FILE; an installed plugin runs from the harness cache, so only
+// the explicit variable or a generic default location can find the file.
 // ============================================================
 
 import { existsSync, lstatSync, readFileSync } from "node:fs";
@@ -29,13 +32,13 @@ export function resolveEnvPath(options: ResolveEnvPathOptions = {}): string {
   const explicit = options.explicit ?? process.env.BODHI_ENV_FILE?.trim();
   const projectDirectory = options.projectDirectory
     ?? process.env.BODHI_PROJECT_DIR?.trim()
+    ?? process.env.BODHI_ROOT?.trim()
     ?? process.env.BODHI_PROJECT?.trim();
   if (explicit) return explicit;
   if (projectDirectory) return path.resolve(projectDirectory, ".env");
   const candidates = [
     path.resolve(cwd, ".env"),
-    path.resolve(home, "projects/owned/bodhi/.env"),
-    path.resolve(home, "Projects/owned/bodhi/.env"),
+    path.resolve(home, "bodhi/.env"),
     path.resolve(home, "Documents/bodhi/.env"),
   ];
 

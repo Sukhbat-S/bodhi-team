@@ -1,11 +1,11 @@
 ---
 name: research-chain
-description: Research consequential or multi-source questions through explicit claims, source strategy, primary evidence, contradiction testing, and calibrated synthesis. Use when the user asks to investigate, compare evidence, verify a substantive claim, understand a complex topic, or build decision-ready research; do not use for a one-fact lookup, repository-only code tracing, specialist product documentation, data analysis, or curated-source ingestion.
+description: Investigates a question across sources: the load-bearing claims, primary evidence for each, the strongest contradiction, and a calibrated answer with what would change it. Use for "is that actually true", "check this claim before I repeat it", "what do the docs themselves say", "compare these two with evidence, not vibes", "dig into this properly".
 ---
 
 # Research Chain
 
-Improve the owner's ability to judge evidence, not merely Codex's ability to collect links. Research ends when the question is decision-ready or understanding-ready, not when the web has been exhausted.
+Improve the owner's ability to judge evidence, not merely the assistant's ability to collect links. Research ends when the question is decision-ready or understanding-ready, not when the web has been exhausted.
 
 ## Select the mode
 
@@ -13,7 +13,7 @@ Improve the owner's ability to judge evidence, not merely Codex's ability to col
 - **Teach me** applies when the owner asks to practice research judgment. Ask exactly one material question about one research variable, end the turn, and wait for the answer before advancing. Do not disguise a checklist or assignment as one question. Read [the learning modes](references/modes.md).
 - **Audit me** applies when the owner provides research, sources, or a conclusion for review. Test its source quality, claim support, contradictions, freshness, and incentives before replacing it. Read [the learning modes](references/modes.md).
 
-Use the language of the conversation. Mongolian must read aloud naturally.
+Use the language of the conversation. Output in any language must read aloud naturally.
 
 ## Scope the question
 
@@ -58,16 +58,9 @@ Place citations next to the claims they support. Prefer short paraphrase over qu
 - Route repository-only implementation tracing to ordinary code investigation or the relevant engineering skill.
 - Route quantitative dataset work to the relevant data-analysis skill.
 - Keep curated-source ingestion and durable library writes outside this research skill.
-- When the evidence is ready and the remaining work is choosing among alternatives, return a compact decision frame to the primary task.
+- When the evidence is ready and the remaining work is choosing among alternatives, hand the decision frame to `$first-principles-decision`.
 
 Default to a chat answer. Create a report only when the user requests a durable artifact or the task explicitly requires one. Never auto-ingest research into BODHI memory or the library; preserve a durable insight only through its governing capture workflow and authorization boundary.
 
 Return concrete corrections, contradictions, and evidence gaps to the primary task. Do not write
 memory, modify skills, or ingest sources into a private library from this workflow.
-
-## Governed learning receipt
-
-Invoke `$skill-evolution` only when this run produces a concrete correction, rejection, workaround,
-routing, context, reference, quality, verification, safety, or agent-boundary signal. A clean run
-creates no learning receipt or write. Keep any receipt sanitized; never include source or conversation
-content, and never let receipt failure block the research result.

@@ -1110,27 +1110,6 @@ export function createCheckpointService(db: Database): CheckpointService {
           `);
         }
       }
-
-      if (
-        existing.patternKey
-        && effectivePassed
-        && outcomeMetrics?.resultDisposition === "accepted"
-      ) {
-        const candidates = await tx.execute(sql`SELECT id FROM work_checkpoints
-          WHERE project_key = ${existing.projectKey} AND pattern_key = ${existing.patternKey}
-            AND state = 'completed' AND completion_verification_state = 'passed'
-            AND outcome_metrics->>'resultDisposition' = 'accepted' ORDER BY id`) as unknown as Array<{ id: string }>;
-        const qualifying: string[] = [];
-        for (const candidate of candidates) {
-          if (isEffectivelyPassed(await readEffectiveCompletion(tx, candidate.id, true))) qualifying.push(candidate.id);
-        }
-        if (qualifying.length >= 3) {
-          await tx.execute(sql`INSERT INTO workflow_candidates(project_key, pattern_key, summary, qualifying_checkpoint_ids, successful_runs)
-            VALUES (${existing.projectKey}, ${existing.patternKey}, ${`Repeated verified workflow: ${existing.patternKey}`}, ${`{${qualifying.join(',')}}`}::uuid[], ${qualifying.length})
-            ON CONFLICT(project_key, pattern_key) DO UPDATE SET qualifying_checkpoint_ids = EXCLUDED.qualifying_checkpoint_ids,
-              successful_runs = EXCLUDED.successful_runs, updated_at = now()`);
-        }
-      }
     });
 
     const result = await get(id);

@@ -1,7 +1,0 @@
-# Owner-neutral personal-install metadata.
-interface:
-  display_name: "Information design review"
-  short_description: "Reviews hierarchy, composition, and information density."
-  default_prompt: "Use $information-design-review to evaluate this interface's hierarchy, composition, density, and responsive priority."
-policy:
-  allow_implicit_invocation: true

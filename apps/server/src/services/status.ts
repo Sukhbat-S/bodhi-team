@@ -54,7 +54,7 @@ export async function buildStatusSnapshot<T extends SchedulerStatusLike>(input: 
     ownerName: input.ownerName,
     capabilities: [
       "memory", "entities", "library", "policy", "parking", "checkpoints",
-      "verification-receipts", "personal-goals", "personal-opportunities", "workflow-candidates",
+      "verification-receipts", "personal-goals", "personal-opportunities",
     ],
   };
 }

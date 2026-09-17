@@ -21,5 +21,10 @@ auth.json
 .DS_Store
 AGENTS.md
 .agents/skills/
+# Harness layer generated per owner by scripts/install-harness.mjs.
+/CLAUDE.md
+.claude/
+skill-evals/skills/
+skill-evals/evals/results/
 .release/
 release-output/

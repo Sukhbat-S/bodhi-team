@@ -49,10 +49,10 @@ export const SUBTYPE_DESCRIPTIONS: Record<string, string> = {
   codebase: "Software project the owner builds or maintains.",
   creative: "Design, content, or artistic project (videos, briefings, essays).",
   research: "Time-bounded investigation or experiment (trading sprint, AI patterns).",
-  "side-bet": "Speculative or pre-commercial project (gaming-center, garlic-restaurant).",
+  "side-bet": "Speculative or pre-commercial project (gaming-center, food-stall).",
 
   // organization
-  supplier: "Vendor providing goods or materials (jewelry suppliers, Hohhot wholesalers).",
+  supplier: "Vendor providing goods or materials (a packaging supplier, a wholesale distributor).",
   platform: "Tech platform or service (Vercel, Supabase, Anthropic, CapCut, Atlassian).",
   media: "News, publication, or content platform (X, TikTok, Telegram).",
   school: "Educational institution.",
@@ -63,10 +63,10 @@ export const SUBTYPE_DESCRIPTIONS: Record<string, string> = {
   // topic
   concept: "Abstract idea or framework (heliocentric design, past-as-inhabitable).",
   skill: "Capability being learned or applied (Mongolian writing, embeddings).",
-  domain: "Field of work (e-commerce, marketing, jewelry).",
+  domain: "Field of work (e-commerce, marketing, logistics).",
 
   // place
-  city: "City (Ulaanbaatar, Hohhot).",
+  city: "City (Tokyo, Berlin).",
   site: "Specific physical location, not commercial in itself (a neighborhood, a landmark).",
   country: "Country (Mongolia, China).",
 };

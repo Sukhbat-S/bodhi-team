@@ -40,17 +40,12 @@ export const CONFIDENCE_RANK_WEIGHT = 0.1;
 //
 // Do NOT say this "offsets" the decay — the old comment did, and the arithmetic
 // does not support it (caught by a cross-provider review, grok-4.5, Jul 10).
-// Decay for a session-active memory is c ← c·(1−d), d=0.05 (coupling.ts
-// DECAY_RATE_BY_SCOPE), plus a neighbour-sustenance term s̄·d. For an ISOLATED
-// memory (s̄≈0) retrieved once per synthesizer cycle the recurrence is
-//     c ← 0.95·c + 0.02   ⇒   fixed point c* = Δ/d = 0.02/0.05 = 0.40
-// Daily use does not hold a memory at its current confidence; it converges to 0.40.
-// Offsetting decay AT c would need Δ = c·d (0.05 at c=1.0) — 2.5× this constant.
+// The coupling decay-with-sustenance step that arithmetic was written against was
+// retired on 2026-09-12 (it had no live caller); the remaining decay path is the
+// synthesizer's absolute stale-row adjustment described below.
 //
-// That equilibrium is SAFE, not a bug: 0.40 sits well clear of retrieve()'s 0.1
-// forget-gate, and coupled memories settle higher (s̄·d adds up to ~+0.02). The
-// genuinely exposed class is orphaned NEAR-MISSES — rows ranked past `limit`, which
-// are scored but never returned, so never bumped
+// The genuinely exposed class is orphaned NEAR-MISSES — rows ranked past `limit`,
+// which are scored but never returned, so never bumped
 // (pattern_memory_decay_without_reinforcement_silent_eviction_jun30).
 //
 // Looks like a risk, is not: the synthesizer's catch-block fallback applies an

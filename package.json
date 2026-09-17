@@ -1,6 +1,6 @@
 {
   "name": "bodhi",
-  "version": "1.1.0-preview.1",
+  "version": "1.1.0-preview.2",
   "packageManager": "npm@11.12.1",
   "engines": {
     "node": ">=24 <25",
@@ -26,7 +26,8 @@
     "build:release-contract": "node scripts/build-release-contract.mjs",
     "pack:release": "node scripts/pack-release.mjs",
     "check:privacy": "node scripts/check-distribution.mjs",
-    "skills:install": "node scripts/install-project-skills.mjs"
+    "skills:install": "node scripts/install-project-skills.mjs",
+    "harness:install": "node scripts/install-harness.mjs"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.1",
