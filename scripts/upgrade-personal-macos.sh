@@ -3,7 +3,9 @@
 set -euo pipefail
 TRUSTED_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
 . "$TRUSTED_ROOT/scripts/lib/bodhi-node.sh"
-NODE_BIN="$(resolve_bodhi_node)"
+# The trusted root is an unpacked release without node_modules; its helpers need Node 24 but
+# no native module, and every dependency install runs later inside the isolated stage.
+NODE_BIN="$(resolve_bodhi_node --no-native-modules)"
 ORIGINAL_ARGS=("$@")
 RELEASE_ROOT="" TARGET_ROOT="" EXPECTED_MANIFEST_SHA256="" APPROVED_SCHEMA_SHA256="" PRESERVE_TEXT=""
 APPLY=0 DEFER_START=0

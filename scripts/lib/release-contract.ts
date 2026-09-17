@@ -60,6 +60,7 @@ const SHARED_FILES = new Set([
   "scripts/build-release-contract.mjs",
   "docs/dual-harness-orchestration.md",
   "docs/decisions/ADR-004-peer-harness-claude-code.md",
+  "docs/windows-wsl2.md",
   // Measurement wrapper only: the plugin manifest, its README and one neutral
   // example case. Run output and per-skill links stay local and gitignored.
   "skill-evals/.claude-plugin/plugin.json",
@@ -86,6 +87,12 @@ const SHARED_FILES = new Set([
   "scripts/backup-db.sh",
   "scripts/personal-schema.ts",
   "scripts/bootstrap-personal-macos.sh",
+  // Linux and WSL2 counterparts of the macOS lifecycle scripts, plus their shared probes.
+  "scripts/bootstrap-personal-linux.sh",
+  "scripts/upgrade-personal-linux.sh",
+  "scripts/activate-personal-voyage-linux.sh",
+  "scripts/install-systemd-user-service.sh",
+  "scripts/lib/linux-platform.sh",
   "scripts/check-personal-coherence.mjs",
   "scripts/import-reviewed-foundation.ts",
   "scripts/import-reviewed-corpus.ts",
@@ -148,7 +155,7 @@ const GATED_BASENAMES = new Set([
 const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
 const VERSION = /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
-const PLATFORMS = new Set(["darwin-arm64", "darwin-x64", "win32-x64", "win32-arm64"]);
+const PLATFORMS = new Set(["darwin-arm64", "darwin-x64", "linux-x64", "linux-arm64", "win32-x64", "win32-arm64"]);
 
 export const RETIRED_AUTOMATIC_MIGRATION_IDS = new Set([
   "apply-active-sessions-current-file-since",

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// macOS dependency preparation: no owner environment or private state is attached.
+// macOS and Linux dependency preparation: no owner environment or private state is attached.
+// macOS confines builds with sandbox-exec; Linux (including WSL2) with bubblewrap.
 import { spawnSync } from 'node:child_process';
 import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -9,6 +10,7 @@ const PRIVATE_PATHS = ['.env', 'AGENTS.md', 'private', 'backups', 'logs', 'data'
 const quote = (path) => JSON.stringify(path);
 
 export function isolatedBuildContext(stageRoot) {
+  if (process.platform === 'linux' && Number(process.versions.node.split('.')[0]) === 24) return linuxIsolatedBuildContext(stageRoot);
   if (process.platform !== 'darwin' || Number(process.versions.node.split('.')[0]) !== 24) throw new Error('Isolated dependency builds require macOS and Node 24');
   const root = realpathSync(stageRoot);
   if (!lstatSync(stageRoot).isDirectory() || lstatSync(stageRoot).isSymbolicLink()) throw new Error('Stage must be a real directory');
@@ -33,7 +35,8 @@ export function isolatedBuildContext(stageRoot) {
     CI: 'true', NO_COLOR: '1', LANG: 'en_US.UTF-8', npm_config_cache: join(scratch, 'cache'), npm_config_userconfig: join(scratch, 'empty.npmrc'),
     npm_config_globalconfig: join(scratch, 'empty-global.npmrc'), npm_config_ignore_scripts: 'true', npm_config_update_notifier: 'false' };
   return {
-    root, scratch, env,
+    root, scratch, env, deniedReadCodes: ['EACCES', 'EPERM'],
+    npm(args, extraEnv = {}) { return this.run('/opt/homebrew/bin/npm', args, extraEnv); },
     run(command, args, extraEnv = {}) {
       const result = spawnSync('/usr/bin/sandbox-exec', ['-p', profile, command, ...args], {
         cwd: root, env: { ...env, ...extraEnv }, encoding: 'utf8', timeout: 600_000, maxBuffer: 32 * 1024 * 1024,
@@ -52,13 +55,26 @@ export function isolatedBuildContext(stageRoot) {
 export function proveBuildIsolation(stageRoot, privateProbeFile) {
   const context = isolatedBuildContext(stageRoot);
   try {
+    // bubblewrap never mounts the probe, so ENOENT is a denial there; prove the file really exists outside first.
+    if (context.deniedReadCodes.includes('ENOENT')) readFileSync(privateProbeFile);
     const result = JSON.parse(context.run(process.execPath, ['-e', `
       const fs = require('node:fs');
       const exposed = ['DATABASE_URL','VOYAGE_API_KEY','BODHI_API_TOKEN','OPENAI_API_KEY','BODHI_BUILD_SECRET_SENTINEL'].some((key) => process.env[key]);
-      let readable = false; try { fs.readFileSync(process.argv[1]); readable = true; } catch (error) { if (!['EACCES','EPERM'].includes(error.code)) throw error; }
+      let readable = false; try { fs.readFileSync(process.argv[1]); readable = true; } catch (error) { if (!${JSON.stringify(context.deniedReadCodes)}.includes(error.code)) throw error; }
       process.stdout.write(JSON.stringify({ ownerEnvironmentAbsent: !exposed, privateFileDenied: !readable }));
     `, realpathSync(privateProbeFile)]));
     if (!result.ownerEnvironmentAbsent || !result.privateFileDenied) throw new Error('Dependency build isolation probe failed');
+    if (context.offline) {
+      // Offline steps must not reach the owner's loopback PostgreSQL (or anything else on loopback).
+      const reach = context.run(process.execPath, ['-e', `
+        const socket = require('node:net').connect({ host: '127.0.0.1', port: 5432 });
+        socket.setTimeout(2000, () => { socket.destroy(); process.stdout.write('open'); });
+        socket.once('connect', () => { socket.destroy(); process.stdout.write('open'); });
+        socket.once('error', () => process.stdout.write('denied'));
+      `]).trim();
+      if (reach !== 'denied') throw new Error('Dependency build isolation probe failed: loopback PostgreSQL is reachable');
+      return { ...result, loopbackDenied: true };
+    }
     return result;
   } finally { context.close(); }
 }
@@ -68,14 +84,66 @@ export function prepareDependencies(stageRoot, privateProbeFile) {
   const context = isolatedBuildContext(stageRoot);
   let failed = false;
   try {
-    context.run('/opt/homebrew/bin/npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund']);
+    context.npm(['ci', '--ignore-scripts', '--no-audit', '--no-fund'], {}, { network: true });
     // The one required native binding builds before owner files or credentials exist.
-    context.run('/opt/homebrew/bin/npm', ['rebuild', 'better-sqlite3', '--ignore-scripts=false'], { npm_config_ignore_scripts: 'false' });
-    context.run('/opt/homebrew/bin/npm', ['run', '_build:workspaces', '--ignore-scripts']);
+    context.npm(['rebuild', 'better-sqlite3', '--ignore-scripts=false'], { npm_config_ignore_scripts: 'false' });
+    context.npm(['run', '_build:workspaces', '--ignore-scripts']);
     const emitted = JSON.parse(context.run(process.execPath, ['-e', `const DB=require('better-sqlite3');const db=new DB(':memory:');const value=db.prepare('select 42 as n').get().n;db.close();process.stdout.write(JSON.stringify({sqlite:value,node:process.versions.node}));`]));
     if (emitted.sqlite !== 42 || !emitted.node.startsWith('24.')) throw new Error('Native binding/runtime probe failed');
     return { ...proof, nativeBinding: 'passed', workspaceBuild: 'passed', node: emitted.node };
   } catch (error) { failed = true; throw error; } finally { if (!failed) context.close(); }
+}
+
+// Linux: bubblewrap with fresh user, PID, IPC, UTS and network namespaces. Only the stage is
+// writable; system directories are read-only; the owner's home, /tmp, /run and every other path
+// stay unmounted, so private state and the probe are invisible rather than unreadable.
+// macOS permits only outbound 443/53, which keeps build code away from the loopback PostgreSQL.
+// bubblewrap cannot filter ports, so only `npm ci --ignore-scripts` (npm's own code) gets the host
+// network; every step that runs dependency code, including the native rebuild, runs offline.
+// better-sqlite3 then compiles from its bundled SQLite source against the local Node headers.
+function linuxIsolatedBuildContext(stageRoot) {
+  const root = realpathSync(stageRoot);
+  if (!lstatSync(stageRoot).isDirectory() || lstatSync(stageRoot).isSymbolicLink()) throw new Error('Stage must be a real directory');
+  for (const name of PRIVATE_PATHS) if (existsSync(join(root, name))) throw new Error(`Private state must not be attached before dependency preparation: ${name}`);
+  const bwrap = '/usr/bin/bwrap';
+  if (!existsSync(bwrap)) throw new Error('Isolated dependency builds on Linux require bubblewrap (sudo apt-get install bubblewrap)');
+  const nodeRoot = dirname(dirname(realpathSync(process.execPath)));
+  const npmCli = join(nodeRoot, 'lib/node_modules/npm/bin/npm-cli.js');
+  if (!existsSync(npmCli)) throw new Error(`npm CLI not found beside Node 24: ${npmCli}`);
+  if (!existsSync(join(nodeRoot, 'include/node/node.h'))) throw new Error(`Node 24 headers not found under ${nodeRoot}/include/node; the offline native build needs them`);
+  const scratch = mkdtempSync(join(root, '.dependency-build-'));
+  mkdirSync(join(scratch, 'tmp')); mkdirSync(join(scratch, 'cache')); mkdirSync(join(scratch, 'home')); mkdirSync(join(scratch, 'node-gyp'));
+  writeFileSync(join(scratch, 'empty.npmrc'), '', { mode: 0o600 });
+  writeFileSync(join(scratch, 'empty-global.npmrc'), '', { mode: 0o600 });
+  const sandbox = ['--die-with-parent', '--new-session', '--unshare-all',
+    '--ro-bind', '/usr', '/usr', '--ro-bind', '/etc', '/etc'];
+  for (const path of ['/bin', '/sbin', '/lib', '/lib32', '/lib64', '/libx32']) sandbox.push('--ro-bind-try', path, path);
+  sandbox.push('--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp', '--tmpfs', '/run');
+  // Name resolution: /etc/resolv.conf is often a link into /run (systemd-resolved) or /mnt/wsl (WSL).
+  const resolver = existsSync('/etc/resolv.conf') ? realpathSync('/etc/resolv.conf') : null;
+  if (resolver && !resolver.startsWith('/etc/') && !resolver.startsWith('/usr/')) sandbox.push('--ro-bind', resolver, resolver);
+  if (!nodeRoot.startsWith('/usr/') && nodeRoot !== '/usr') sandbox.push('--ro-bind', nodeRoot, nodeRoot);
+  sandbox.push('--bind', root, root, '--chdir', root);
+  const env = { PATH: `${dirname(process.execPath)}:/usr/local/bin:/usr/bin:/bin`, HOME: join(scratch, 'home'), TMPDIR: join(scratch, 'tmp'),
+    CI: 'true', NO_COLOR: '1', LANG: 'C.UTF-8', npm_config_cache: join(scratch, 'cache'), npm_config_userconfig: join(scratch, 'empty.npmrc'),
+    npm_config_globalconfig: join(scratch, 'empty-global.npmrc'), npm_config_ignore_scripts: 'true', npm_config_update_notifier: 'false',
+    npm_config_devdir: join(scratch, 'node-gyp'), npm_config_nodedir: nodeRoot };
+  return {
+    root, scratch, env, deniedReadCodes: ['EACCES', 'EPERM', 'ENOENT'], offline: true,
+    npm(args, extraEnv = {}, { network = false } = {}) { return this.run(process.execPath, [npmCli, ...args], extraEnv, { network }); },
+    run(command, args, extraEnv = {}, { network = false } = {}) {
+      const result = spawnSync(bwrap, [...sandbox, ...(network ? ['--share-net'] : []), '--', command, ...args], {
+        cwd: root, env: { ...env, ...extraEnv }, encoding: 'utf8', timeout: 600_000, maxBuffer: 32 * 1024 * 1024,
+      });
+      if (result.error || result.status !== 0) {
+        const error = new Error(`Isolated build command failed: ${command} (status ${result.status ?? 'unavailable'}, error ${result.error?.code ?? 'none'}, signal ${result.signal ?? 'none'}): ${(result.stderr ?? '').slice(-3000)}`);
+        error.capturedStdout = result.stdout;
+        throw error;
+      }
+      return result.stdout;
+    },
+    close() { rmSync(scratch, { recursive: true, force: true }); },
+  };
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {

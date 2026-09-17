@@ -115,8 +115,15 @@ else
   # Codex tool shell, launchd survives shell cleanup, restarts crashes, and
   # starts BODHI again after login.
   echo "Starting durable BODHI service on :$BODHI_PORT_VALUE..."
+  SERVER_LOGS="$LOG_DIR/server.log"
   if [[ "$(uname -s)" == "Darwin" ]] && command -v launchctl >/dev/null 2>&1; then
     bash "$BODHI_DIR/scripts/install-launch-agent.sh"
+  elif [[ "$(uname -s)" == "Linux" ]] && bash -c '. "$1/scripts/lib/linux-platform.sh" && bodhi_systemd_user_available' _ "$BODHI_DIR"; then
+    # On Linux and WSL2 with systemd, a user unit plays launchd's role. Without
+    # systemd, the detached process below survives this shell but not a WSL
+    # shutdown; see docs/windows-wsl2.md.
+    bash "$BODHI_DIR/scripts/install-systemd-user-service.sh"
+    SERVER_LOGS="journalctl --user -u $SERVICE_LABEL.service"
   else
     nohup bash "$BODHI_DIR/scripts/run-server.sh" > "$LOG_DIR/server.log" 2>&1 &
     echo $! > "$LOG_DIR/server.pid"
@@ -146,14 +153,14 @@ else
   if [ "$READY" -ne 1 ]; then
     echo " failed!" >&2
     echo "BODHI did not emit a healthy /api/status response within $START_TIMEOUT_SECONDS seconds." >&2
-    echo "Inspect: $LOG_DIR/server.log" >&2
+    echo "Inspect: $SERVER_LOGS" >&2
     exit 1
   fi
 
   echo ""
   echo "=== BODHI Running ==="
   echo "  Everything: http://localhost:$BODHI_PORT_VALUE"
-  echo "  Logs:       $LOG_DIR/server.log"
+  echo "  Logs:       $SERVER_LOGS"
 fi
 
 echo ""

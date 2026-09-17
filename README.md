@@ -6,7 +6,7 @@ This repository distributes reusable source and skills. It contains no owner dat
 
 ## Status
 
-Version 1.1.0-preview.2 is a private preview for technical teammates. Source builds and automated checks are documented in the release notes; a clean-machine installation and every external connector are not yet certified. Initial installation support is macOS (Apple Silicon and Intel), with Node 24, npm 11, Homebrew PostgreSQL 18, pgvector and `jq`. Windows installation is not covered by this preview.
+Version 1.1.0-preview.3 is a private preview for technical teammates. Source builds and automated checks are documented in the release notes; a clean-machine installation and every external connector are not yet certified. Installation support is macOS (Apple Silicon and Intel), with Node 24, npm 11, Homebrew PostgreSQL 18, pgvector and `jq`, and Windows through WSL2 with Ubuntu 24.04 or 22.04 (see [Windows (WSL2)](#windows-wsl2)). The WSL2 path is new in this preview and has been exercised in Ubuntu containers, not yet on a real Windows machine.
 
 ## First installation
 
@@ -23,6 +23,25 @@ bash scripts/bootstrap-personal-macos.sh --owner "Your name" --assistant "BODHI"
 6. Add your own Voyage configuration locally, then follow `scripts/activate-personal-voyage-macos.sh --help` usage. Never commit the key. The server stays on loopback by default.
 7. Install the harness layer (next section).
 
+### Windows (WSL2)
+
+BODHI runs inside a WSL2 Ubuntu distribution. The full guide, with troubleshooting, is [docs/windows-wsl2.md](docs/windows-wsl2.md). In short:
+
+1. In PowerShell, after pending Windows updates and a restart: `wsl.exe --update`, then `wsl.exe --install -d Ubuntu-24.04`. Always name the distribution with `-d`; Docker Desktop's `docker-desktop` may be the default.
+2. In `/etc/wsl.conf` set `[boot] systemd=true` and `[interop] appendWindowsPath=false`, then `wsl.exe --shutdown` and reopen with `wsl.exe -d Ubuntu-24.04`. Inside WSL run `git config --global core.autocrlf false`.
+3. Download, verify and extract the release package inside the Linux filesystem, for example `~/bodhi`, never under `/mnt/c`: Windows drives cannot keep `.env` at mode 0600, are slow for npm and PostgreSQL, and invite CRLF line endings.
+4. Install the prerequisites: build tools, `jq`, `lsof` and bubblewrap from Ubuntu, PostgreSQL 18 and `postgresql-18-pgvector` from the PGDG apt repository, Node.js 24 (npm 11) from NodeSource, then a local PostgreSQL role for your account. Loopback TCP is never trusted: `--apply` gives the role a generated scram-sha-256 password stored only in `.env`, because WSL2 forwards loopback ports to Windows. The exact commands are in the guide, and the preflight prints them for anything missing.
+5. Dry-run preflight. It also reports the WSL generation, the Ubuntu release and whether systemd runs, and refuses WSL1, `docker-desktop`, a checkout under `/mnt` and Windows binaries on `PATH`:
+
+```bash
+bash scripts/bootstrap-personal-linux.sh --owner "Your name" --assistant "BODHI" --database bodhi_personal --port 4000 --expected-manifest-sha256 MANIFEST_HASH_FROM_RELEASE
+```
+
+6. Append `--apply --defer-voyage`, then run `bash scripts/activate-personal-voyage-linux.sh`. It prompts for the key without echo and stores it only in `.env` (mode 0600).
+7. Service: with systemd, `scripts/start.sh` installs a systemd user unit (`scripts/install-systemd-user-service.sh`) that restarts on failure, logs to `journalctl --user`, and enables linger. Without systemd it starts a detached process; the guide covers a Task Scheduler task that runs `wsl.exe -d Ubuntu-24.04 --exec /bin/bash BODHI_ROOT/scripts/start.sh` at sign-in.
+8. Harness, run inside WSL: `npm run harness:install` for Codex or Claude Code running inside WSL (recommended), or `node scripts/install-harness.mjs --platform windows-host` for a harness running on Windows. The second form copies skills into `%USERPROFILE%` and prints MCP and hook registrations through `wsl.exe -d Ubuntu-24.04 --exec ...`.
+9. Verify: `curl -fsS http://localhost:4000/health` in WSL and `curl.exe -fsS http://localhost:4000/health` in PowerShell. A fresh Codex task and a fresh Claude Code session each list the 24 `bodhi` tools and complete `search_memories`.
+
 ## Codex and Claude Code
 
 Both harnesses run over the same substrate, skills, trust policy and memory ([ADR-004](docs/decisions/ADR-004-peer-harness-claude-code.md)). The head-and-worker pattern, model routing, and the rules both harnesses share are in [docs/dual-harness-orchestration.md](docs/dual-harness-orchestration.md).
@@ -38,7 +57,13 @@ Use `--harness codex` or `--harness claude-code` to install one side only. The i
 - **Claude Code:** the `settings.json` hooks (SessionStart identity, PreCompact checkpoint, post-compaction recall) and the documented subagent limits `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` and `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` (Claude Code v2.1.217 or later); the `claude mcp add bodhi --scope user …` command. Global instructions: `templates/claude-code/CLAUDE.md.global-template`.
 - **Codex:** the `config.toml` block that registers the MCP server, the `hooks.json` SessionStart block, and the plugin alternative. Global instructions: `templates/codex/AGENTS.md.global-template`.
 
+On Linux and WSL2 the installer detects the platform itself. For Codex or Claude Code running on Windows against a BODHI inside WSL, add `--platform windows-host` (see [docs/windows-wsl2.md](docs/windows-wsl2.md#8-harness)).
+
 Both harnesses run the same bundled MCP server (`integrations/codex-plugin/bodhi/mcp/launch.sh`, 24 tools). Register it with `BODHI_ENV_FILE` pointing at this checkout's private `.env`; that is the supported path wherever the checkout lives. Without it the server looks for `.env` via `BODHI_PROJECT_DIR`/`BODHI_ROOT`, the working directory, then `~/bodhi` and `~/Documents/bodhi`. It refuses a non-loopback endpoint.
+
+## Upgrading from v1.1.0-preview.2
+
+Preview.3 adds the Linux and WSL2 installation path. For an existing macOS installation there are no schema changes, no migrations and no `.env` edits. The one macOS behaviour change is in the upgrader: `upgrade-personal-macos.sh` now runs from a freshly extracted package without `BODHI_DIR` set (see CHANGELOG). Use path A or B below from your installed directory. Sealed releases now also declare `linux-x64` and `linux-arm64` compatibility. On Linux, use `upgrade-personal-linux.sh` in place of `upgrade-personal-macos.sh` ([docs/windows-wsl2.md](docs/windows-wsl2.md#upgrading)).
 
 ## Upgrading from v1.1.0-preview.1
 

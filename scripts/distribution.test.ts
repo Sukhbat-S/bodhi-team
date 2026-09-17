@@ -1,6 +1,10 @@
 import {describe,it,expect} from "vitest";
-import {readFileSync} from "node:fs";
+import {cpSync,mkdtempSync,readFileSync,realpathSync,writeFileSync} from "node:fs";
+import {execFileSync,spawnSync} from "node:child_process";
+import {tmpdir} from "node:os";
+import {join,resolve} from "node:path";
 import {classifyReleasePath,ownerNeutralContentError,validatePersonalReleaseManifest} from "./lib/release-contract.js";
+import {linuxExecutablePath,processOwned,systemdUnitOwned} from "./lib/service-ownership.js";
 describe("distribution boundary",()=>{
  it.each([".env","data/records.json","backups/snapshot.sql","profiles/owner.json","../outside.json","auth.json"])("excludes private path %s",path=>expect(classifyReleasePath(path)).not.toBe("shared"));
  it("includes reviewed code and generic skills",()=>{expect(classifyReleasePath("apps/server/src/config.ts")).toBe("shared");expect(classifyReleasePath("templates/personal/skills/component-driven-ui/SKILL.md")).toBe("shared")});
@@ -21,6 +25,19 @@ describe("distribution boundary",()=>{
   "skill-evals/evals/fire-verify-by-emission/prompt.md",
  ])("admits the reviewed harness surface %s",path=>expect(classifyReleasePath(path)).toBe("shared"));
  it.each([
+  "scripts/bootstrap-personal-linux.sh",
+  "scripts/upgrade-personal-linux.sh",
+  "scripts/activate-personal-voyage-linux.sh",
+  "scripts/install-systemd-user-service.sh",
+  "scripts/lib/linux-platform.sh",
+  "docs/windows-wsl2.md",
+ ])("admits the reviewed Linux and WSL2 surface %s",path=>expect(classifyReleasePath(path)).toBe("shared"));
+ it.each(["scripts/bootstrap-personal-windows.ps1","docs/windows-notes.md","configs/systemd/owner.service"])("does not admit unreviewed platform file %s",path=>expect(classifyReleasePath(path)).not.toBe("shared"));
+ it("keeps every reviewed Linux and WSL2 file owner-neutral",()=>{
+  for(const path of ["scripts/bootstrap-personal-linux.sh","scripts/upgrade-personal-linux.sh","scripts/activate-personal-voyage-linux.sh","scripts/install-systemd-user-service.sh","scripts/lib/linux-platform.sh","docs/windows-wsl2.md"])expect(ownerNeutralContentError(readFileSync(resolve(path))),path).toBeNull();
+ });
+
+ it.each([
   "templates/personal/skills/skill-evolution/SKILL.md",
   "templates/personal/skills/operational-debugging/SKILL.md",
   "skill-evals/evals/results/latest.json",
@@ -29,6 +46,144 @@ describe("distribution boundary",()=>{
   ".claude/skills/session-start",
   "CLAUDE.md",
  ])("keeps retired, generated or owner-local path %s outside the release",path=>expect(classifyReleasePath(path)).not.toBe("shared"));
+});
+
+describe("Linux release compatibility",()=>{
+ const manifest=(platforms:string[])=>({contractVersion:1,releaseVersion:"v1.1.0-preview.3",sourceCommit:"a".repeat(40),sourceDirty:false,compatibility:{platforms,schemaFrom:0,schemaTo:0},artifacts:[{path:"README.md",sha256:"b".repeat(64)}],migrations:[]});
+ it("accepts Linux x64 and arm64 targets",()=>expect(validatePersonalReleaseManifest(manifest(["darwin-arm64","linux-x64","linux-arm64"]))).toEqual([]));
+ it("still rejects an unknown platform",()=>expect(validatePersonalReleaseManifest(manifest(["linux-riscv64"]))).not.toEqual([]));
+ it("packs releases that declare the Linux targets",()=>expect(readFileSync(resolve("scripts/pack-release.mjs"),"utf8")).toContain("'linux-x64','linux-arm64'"));
+});
+
+describe("Linux and WSL2 platform probes",()=>{
+ const dir=mkdtempSync(join(tmpdir(),"bodhi-linux-probe-"));
+ const fixture=(name:string,text:string)=>{const path=join(dir,name);writeFileSync(path,text);return path;};
+ const probe=(fn:string,...args:string[])=>execFileSync("bash",["-c",`. "$1"; shift; "$@"`,"_",resolve("scripts/lib/linux-platform.sh"),fn,...args],{encoding:"utf8",env:{PATH:process.env.PATH??""}}).trim();
+ it("tells WSL2, WSL1 and plain Linux kernels apart",()=>{
+  expect(probe("bodhi_wsl_kind",fixture("wsl2","Linux version 6.6.87-microsoft-standard-WSL2 (gcc) #1 SMP"))).toBe("wsl2");
+  expect(probe("bodhi_wsl_kind",fixture("wsl1","Linux version 4.4.0-26100-Microsoft #1-Microsoft"))).toBe("wsl1");
+  expect(probe("bodhi_wsl_kind",fixture("linux","Linux version 6.8.0-45-generic (buildd) #45-Ubuntu SMP"))).toBe("none");
+ });
+ it("reads the systemd switch only from the [boot] section",()=>{
+  expect(probe("bodhi_wsl_systemd_configured",fixture("on","[user]\ndefault=owner\n\n[boot]\nsystemd = true # enabled\n"))).toBe("yes");
+  expect(probe("bodhi_wsl_systemd_configured",fixture("other-section","[interop]\nsystemd=true\n"))).toBe("no");
+  expect(probe("bodhi_wsl_systemd_configured",fixture("off","[boot]\nsystemd=false\n"))).toBe("no");
+  expect(probe("bodhi_wsl_systemd_configured",join(dir,"absent"))).toBe("no");
+ });
+ it("parses the distribution release",()=>{
+  expect(probe("bodhi_os_release",fixture("os-release",'ID=ubuntu\nVERSION_ID="24.04"\nVERSION_CODENAME=noble\n'))).toBe("ubuntu 24.04 noble");
+ });
+ it("documents exactly the prerequisite and database commands the bootstrap prints",()=>{
+  const guide=readFileSync(resolve("docs/windows-wsl2.md"),"utf8");
+  for(const fn of ["bodhi_print_linux_prerequisites","bodhi_print_postgres_access_fix","bodhi_print_postgres_hba_fix"]){
+   for(const line of probe(fn).split("\n").slice(1).map(l=>l.trim()).filter(Boolean))expect(guide,`${fn}: ${line}`).toContain(`\n${line}\n`);
+  }
+ });
+});
+
+describe("sealed-package upgraders",()=>{
+ // An unpacked release has no node_modules. Before preview.3 the upgrader demanded a Node whose
+ // better-sqlite3 loaded from that release, so it stopped before reading its arguments.
+ it.each(["upgrade-personal-macos.sh","upgrade-personal-linux.sh"])("%s needs only Node 24 from a fresh package",script=>{
+  const release=mkdtempSync(join(tmpdir(),"bodhi-fresh-release-"));
+  cpSync(resolve("scripts"),join(release,"scripts"),{recursive:true});
+  const result=spawnSync("bash",[join(release,"scripts",script)],{encoding:"utf8",env:{PATH:process.env.PATH??"",HOME:release,BODHI_NODE:process.execPath}});
+  expect(result.stderr).not.toContain("cannot find a Node 24 runtime");
+  expect(result.status).toBe(2);
+  expect(result.stderr).toContain("usage:");
+ });
+});
+
+describe("Linux process identity",()=>{
+ const root=realpathSync(resolve("."));
+ it("keeps the executable path of a binary replaced while it runs",()=>{
+  expect(linuxExecutablePath("/usr/bin/node (deleted)")).toBe("/usr/bin/node");
+  expect(linuxExecutablePath("/usr/bin/node")).toBe("/usr/bin/node");
+  expect(linuxExecutablePath("/opt/node (deleted)/bin/node")).toBe("/opt/node (deleted)/bin/node");
+ });
+ it("owns the server whose Node binary was upgraded underneath it",()=>{
+  expect(processOwned({pid:10,ppid:1,started:"",executable:linuxExecutablePath("/usr/bin/node (deleted)"),command:"/usr/bin/node node_modules/tsx/dist/cli.mjs apps/server/src/index.ts",cwd:root},root)).toBe(true);
+ });
+ it("owns the dashboard's sh -c vite when /bin/sh is dash, and nothing else run by dash",()=>{
+  const dashboard=join(root,"apps/dashboard");
+  expect(processOwned({pid:11,ppid:1,started:"",executable:"/usr/bin/dash",command:"sh -c vite",cwd:dashboard},root)).toBe(true);
+  expect(processOwned({pid:12,ppid:1,started:"",executable:"/usr/bin/dash",command:"sh -c curl example",cwd:dashboard},root)).toBe(false);
+  expect(processOwned({pid:13,ppid:1,started:"",executable:"/usr/bin/zsh",command:"sh -c vite",cwd:dashboard},root)).toBe(false);
+ });
+});
+
+describe("Linux bootstrap rollback",()=>{
+ // Runs the real rollback function with PostgreSQL and node stubbed, so no database or container is needed.
+ const rollback=(dropdbStatus:number)=>{
+  const text=readFileSync(resolve("scripts/bootstrap-personal-linux.sh"),"utf8");
+  const start=text.indexOf("rollback_fresh_install() {");
+  const body=text.slice(start,text.indexOf("\n}\n",start)+3);
+  const dir=mkdtempSync(join(tmpdir(),"bodhi-rollback-"));
+  const script=`set -euo pipefail
+LOG="${dir}/calls"
+pg_admin() { printf '%s\\n' "$*" >> "$LOG"; if [[ "$1" == dropdb ]]; then return ${dropdbStatus}; fi; }
+node() { :; }
+BODHI_DIR="${dir}" LABEL=com.bodhi.test.server PORT_VALUE=4999 DATABASE_NAME=bodhi_test CURRENT_USER=owner
+PRIVATE_BUILD_PROBE="" ENV_TMP="" ENV_CREATED=0 OWNER_INSTRUCTIONS_CREATED=0 COMPLETE=0 DATABASE_CREATED=1 PASSWORD_SET=1
+${body}
+trap rollback_fresh_install EXIT
+false`;
+  const result=spawnSync("bash",["-c",script],{encoding:"utf8"});
+  return {status:result.status,stderr:result.stderr,calls:readFileSync(join(dir,"calls"),"utf8").trim().split("\n")};
+ };
+ it("clears the generated role password before dropping the database",()=>{
+  const {calls}=rollback(0);
+  expect(calls[0]).toContain('ALTER ROLE "owner" PASSWORD NULL');
+  expect(calls[1]).toBe("dropdb bodhi_test");
+ });
+ it("still clears the password when the database cannot be dropped",()=>{
+  const {status,stderr,calls}=rollback(1);
+  expect(calls[0]).toContain("PASSWORD NULL");
+  expect(calls).toContain("dropdb bodhi_test");
+  expect(status).toBe(1);
+  expect(stderr).toContain("retained for explicit recovery");
+ });
+});
+
+describe("systemd user unit ownership",()=>{
+ const root=realpathSync(resolve("."));
+ const dir=mkdtempSync(join(tmpdir(),"bodhi-unit-"));
+ const rendered=()=>{const out=join(dir,`unit-${Math.random().toString(36).slice(2)}.service`);execFileSync("bash",[resolve("scripts/install-systemd-user-service.sh"),"--render-only",out],{env:{PATH:process.env.PATH??"",HOME:dir,BODHI_INSTANCE:"unit-test"}});return readFileSync(out,"utf8");};
+ it("recognises the unit it renders for this checkout",()=>{
+  const unit=rendered();
+  expect(unit).toContain("SyslogIdentifier=com.bodhi.unit-test.server");
+  expect(unit).toContain("Restart=on-failure");
+  expect(systemdUnitOwned(unit,root)).toBe(true);
+ });
+ it("refuses a unit for another checkout or with extra commands",()=>{
+  const unit=rendered();
+  expect(systemdUnitOwned(unit,realpathSync(tmpdir()))).toBe(false);
+  expect(systemdUnitOwned(unit.replace("[Service]","[Service]\nExecStartPre=/bin/true"),root)).toBe(false);
+  expect(systemdUnitOwned(unit.replace(/ExecStart=.*/,"ExecStart=/bin/sh -c true"),root)).toBe(false);
+ });
+});
+
+describe("harness installer topologies",()=>{
+ const run=(...args:string[])=>spawnSync(process.execPath,[resolve("scripts/install-harness.mjs"),...args],{encoding:"utf8",env:{...process.env,HOME:mkdtempSync(join(tmpdir(),"bodhi-harness-home-"))}});
+ it.runIf(process.platform==="darwin")("refuses Linux topologies on macOS",()=>{
+  for(const platform of ["wsl","windows-host"]){const result=run("--platform",platform);expect(result.status).toBe(1);expect(result.stderr).toContain("inside the Linux or WSL2 distribution");}
+ });
+ it("rejects --windows-home without the windows-host topology",()=>{
+  const result=run("--windows-home","/tmp");
+  expect(result.status).toBe(2);
+ });
+ it.runIf(process.platform==="linux"&&process.versions.node.startsWith("24."))("renders Windows-side registrations through wsl.exe with copied skills",()=>{
+  const windowsHome=mkdtempSync(join(tmpdir(),"bodhi-windows-profile-"));
+  const result=spawnSync(process.execPath,[resolve("scripts/install-harness.mjs"),"--platform","windows-host","--windows-home",windowsHome],{encoding:"utf8",env:{...process.env,WSL_DISTRO_NAME:"Ubuntu-24.04"}});
+  expect(result.status,result.stderr).toBe(0);
+  expect(result.stdout).toContain(`command = "wsl.exe"`);
+  expect(result.stdout).toContain(`"-d", "Ubuntu-24.04", "--exec", "/usr/bin/env"`);
+  expect(result.stdout).toContain(`claude mcp add bodhi --scope user -- wsl.exe -d Ubuntu-24.04 --exec /usr/bin/env BODHI_ENV_FILE=`);
+  expect(result.stdout).toContain(`wsl.exe -d Ubuntu-24.04 --exec /bin/bash ${realpathSync(resolve("."))}/scripts/harness-session-lifecycle.sh codex`);
+  expect(result.stdout).toMatch(/would copy session-start/);
+  expect(result.stdout).not.toContain('command = "/bin/bash"');
+  expect(result.stdout).not.toContain("--env BODHI_ENV_FILE=");
+ });
 });
 
 // Fixtures are assembled from code points or parts so this shared file never
