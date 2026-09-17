@@ -231,6 +231,10 @@ Then start a fresh Codex task or Claude Code session in the topology you chose. 
 
 **Windows-side harness shows the MCP server as failed.** Run the printed command in PowerShell: `wsl.exe -d Ubuntu-24.04 --exec /usr/bin/env BODHI_ENV_FILE=... BODHI_NODE=... /bin/bash .../launch.sh`. It should wait silently for input; stop it with Ctrl+C. `BODHI MCP startup failed` means `.env` is missing, is not mode 0600, or `BODHI_URL` is not loopback. A Node error means `BODHI_NODE` no longer points at Node 24; re-run the installer. A distribution error means the `-d` name differs from `wsl.exe -l -v`.
 
+**`Host key verification failed` when a Windows agent clones from GitHub.** Windows OpenSSH has no saved github.com host key, and a non-interactive agent cannot accept one. Use HTTPS through the GitHub CLI login instead: `gh auth setup-git`, then clone `https://github.com/<owner>/<repo>.git`.
+
+**Codex will not open any thread: "can't load config.toml" / invalid transport in `mcp_servers.<name>`.** An `[mcp_servers.<name>]` block has neither `command` nor `url`. Codex cannot repair its own config while it is broken: close Codex, back up `%USERPROFILE%\.codex\config.toml`, comment out that block, reopen. Before any agent edits `config.toml`, back it up and run `codex mcp list` afterwards; restore the backup on error.
+
 **`bash\r: No such file or directory`.** CRLF line endings: see section 3.
 
 **Refusing Windows binaries on the Linux PATH.** Install the Linux packages from section 5, set `appendWindowsPath=false`, and reopen the distribution.
